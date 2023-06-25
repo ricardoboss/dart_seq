@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -10,7 +9,7 @@ import 'package:dart_seq/src/seq_http_client_configuration.dart';
 import 'package:dart_seq/src/seq_response.dart';
 
 class SeqHttpClient implements SeqClient {
-  final HttpClient client;
+  final http.Client client;
 
   final SeqHttpClientConfiguration _configuration;
   final Uri _endpoint;
@@ -18,7 +17,7 @@ class SeqHttpClient implements SeqClient {
   String? _minimumLevelAccepted;
 
   SeqHttpClient(this._configuration)
-      : client = HttpClient(),
+      : client = http.Client(),
         _endpoint = Uri.parse("${_configuration.host}/api/events/raw");
 
   @override
@@ -38,15 +37,32 @@ class SeqHttpClient implements SeqClient {
 
   Future<http.Response> sendRequest(String body) async {
     final apiKey = _configuration.apiKey;
+    var tries = 0;
 
-    return await http.post(
-      _endpoint,
-      headers: {
-        HttpHeaders.contentTypeHeader: 'application/vnd.serilog.clef',
-        if (apiKey != null) 'X-Seq-ApiKey': apiKey,
-      },
-      body: body,
-    );
+    http.Response? response;
+    Object? lastException;
+
+    do {
+      try {
+        response = await http.post(
+          _endpoint,
+          headers: {
+            'Content-Type': 'application/vnd.serilog.clef',
+            if (apiKey != null) 'X-Seq-ApiKey': apiKey,
+          },
+          body: body,
+        );
+      } catch (e) {
+        lastException = e;
+      }
+    } while (![201, 429].contains(response?.statusCode) &&
+        ++tries < _configuration.maxRetries);
+
+    if (lastException != null) {
+      throw lastException;
+    }
+
+    return response!;
   }
 
   Future<void> handleResponse(http.Response response) async {
