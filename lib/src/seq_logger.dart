@@ -67,13 +67,13 @@ class SeqLogger {
 
   Future<void> flush() async => client.sendEvents(_events);
 
-  void log(SeqLogLevel level, String message, [SeqContext? context]) {
+  Future<void> log(SeqLogLevel level, String message, [SeqContext? context]) async {
     if (context != null && context.isEmpty) {
       context = null;
     }
 
     final event = SeqEvent.now(message, level.value, null, null, context);
 
-    send([event]);
+    await send([event]);
   }
 }
