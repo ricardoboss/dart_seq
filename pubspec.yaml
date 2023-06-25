@@ -1,5 +1,5 @@
 name: dart_seq
-description: A Dart library for Seq HTTP ingestion
+description: A Dart logging client for (batched) Seq HTTP ingestion with automated retries.
 version: 0.0.1
 homepage: https://github.com/ricardoboss/dart_seq
 
