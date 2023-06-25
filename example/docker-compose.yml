@@ -1,0 +1,10 @@
+version: '3.9'
+
+services:
+  seq:
+    image: datalust/seq:latest
+    ports:
+      - '80:80'
+      - '5341:5341'
+    environment:
+      ACCEPT_EULA: Y
