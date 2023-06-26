@@ -1,3 +1,7 @@
+## 0.0.2
+
+* Remove dependency on `flutter` SDK
+
 ## 0.0.1
 
 * Initial release 🎉
