@@ -1,6 +1,7 @@
 ## 0.0.2
 
 * Remove dependency on `flutter` SDK
+* The `context` parameter on `SeqEvent.<level>()` methods is now optional
 
 ## 0.0.1
 
