@@ -1,3 +1,7 @@
+## 0.0.3
+
+* Downgraded `http` dependency to at most `^0.13.3` for more compatibility
+
 ## 0.0.2
 
 * Remove dependency on `flutter` SDK

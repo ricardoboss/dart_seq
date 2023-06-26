@@ -1,10 +1,10 @@
 name: dart_seq
 description: A Dart logging client for (batched) Seq HTTP ingestion with automated retries.
-version: 0.0.2
+version: 0.0.3
 homepage: https://github.com/ricardoboss/dart_seq
 
 environment:
   sdk: '>=3.0.5 <4.0.0'
 
 dependencies:
-  http: ^1.0.0
+  http: '>=0.13.3 <2.0.0'
