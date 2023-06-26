@@ -128,8 +128,11 @@ class SeqEvent {
     );
   }
 
+  /// Used by [jsonEncode], alias for [toMap].
+  Map<String, dynamic> toJson() => toMap();
+
   /// Returns this event as a map compatible with the GELF logging format.
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     final Map<String, dynamic> data = {
       '@t': timestamp.toUtc().toIso8601String(),
     };
@@ -170,5 +173,51 @@ class SeqEvent {
     }
 
     return data;
+  }
+
+  factory SeqEvent.fromMap(Map<String, dynamic> map) {
+    DateTime? timestamp;
+    String? message;
+    String? messageTemplate;
+    String? level;
+    Object? exception;
+    int? id;
+    Map<String, dynamic>? renderings;
+    SeqContext? context;
+
+    for (final e in map.entries) {
+      if (e.key == "@t") {
+        timestamp = DateTime.parse(e.value);
+      } else if (e.key == "@m") {
+        message = e.value;
+      } else if (e.key == "@mt") {
+        messageTemplate = e.value;
+      } else if (e.key == "@l") {
+        level = e.value;
+      } else if (e.key == "@x") {
+        exception = e.value;
+      } else if (e.key == "@r") {
+        renderings = e.value;
+      } else if (e.key == "@i") {
+        id = int.parse(e.value);
+      } else {
+        context ??= <String, dynamic>{};
+
+        context[e.key] = e.value;
+      }
+    }
+
+    timestamp ??= DateTime.now();
+
+    return SeqEvent(
+      timestamp,
+      message,
+      messageTemplate,
+      level,
+      exception,
+      id,
+      renderings,
+      context,
+    );
   }
 }
