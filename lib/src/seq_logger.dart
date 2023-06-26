@@ -33,8 +33,11 @@ class SeqLogger {
     SeqContext? globalContext,
     String? minimumLogLevel,
   }) {
-    final httpConfig = SeqHttpClientConfiguration(host, apiKey, maxRetries);
-    final httpClient = SeqHttpClient(httpConfig);
+    final httpClient = SeqHttpClient(
+      host: host,
+      apiKey: apiKey,
+      maxRetries: maxRetries,
+    );
 
     final actualCache = cache ?? SeqInMemoryCache();
 

@@ -5,20 +5,27 @@ import 'package:http/http.dart' as http;
 import 'package:dart_seq/src/seq_client.dart';
 import 'package:dart_seq/src/seq_client_exception.dart';
 import 'package:dart_seq/src/seq_event.dart';
-import 'package:dart_seq/src/seq_http_client_configuration.dart';
 import 'package:dart_seq/src/seq_response.dart';
 
+/// A HTTP ingestion client for Seq. Implements the [SeqClient] interface.
 class SeqHttpClient implements SeqClient {
-  final http.Client client;
-
-  final SeqHttpClientConfiguration _configuration;
+  final String? _apiKey;
+  final int _maxRetries;
   final Uri _endpoint;
 
   String? _minimumLevelAccepted;
 
-  SeqHttpClient(this._configuration)
-      : client = http.Client(),
-        _endpoint = Uri.parse("${_configuration.host}/api/events/raw");
+  SeqHttpClient({
+    required String host,
+    String? apiKey,
+    int maxRetries = 5,
+  })  : assert(host.isNotEmpty, "host must not be empty"),
+        assert(host.startsWith('http'), "the host must contain a scheme"),
+        assert(null == apiKey || apiKey.isNotEmpty, "apiKey must not be empty"),
+        assert(maxRetries >= 0, "maxRetries must be >= 0"),
+        _apiKey = apiKey,
+        _maxRetries = maxRetries,
+        _endpoint = Uri.parse("$host/api/events/raw");
 
   @override
   String? get minimumLevelAccepted => _minimumLevelAccepted;
@@ -37,7 +44,7 @@ class SeqHttpClient implements SeqClient {
       events.reversed.map(jsonEncode).join("\n");
 
   Future<http.Response> sendRequest(String body) async {
-    final apiKey = _configuration.apiKey;
+    final apiKey = _apiKey;
     var tries = 0;
 
     http.Response? response;
@@ -57,7 +64,7 @@ class SeqHttpClient implements SeqClient {
         lastException = e;
       }
     } while (![201, 429].contains(response?.statusCode) &&
-        ++tries < _configuration.maxRetries);
+        ++tries < _maxRetries);
 
     if (lastException != null) {
       throw lastException;
