@@ -34,35 +34,35 @@ class SeqEvent {
   }
 
   /// Creates a [SeqLogLevel.verbose] event.
-  static SeqEvent verbose(String message, SeqContext? context) {
+  static SeqEvent verbose(String message, [SeqContext? context]) {
     return SeqEvent.now(
         message, SeqLogLevel.verbose.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.debug] event.
-  static SeqEvent debug(String message, SeqContext? context) {
+  static SeqEvent debug(String message, [SeqContext? context]) {
     return SeqEvent.now(message, SeqLogLevel.debug.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.information] event.
-  static SeqEvent info(String message, SeqContext? context) {
+  static SeqEvent info(String message, [SeqContext? context]) {
     return SeqEvent.now(
         message, SeqLogLevel.information.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.warning] event.
-  static SeqEvent warning(String message, SeqContext? context) {
+  static SeqEvent warning(String message, [SeqContext? context]) {
     return SeqEvent.now(
         message, SeqLogLevel.warning.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.error] event.
-  static SeqEvent error(String message, SeqContext? context) {
+  static SeqEvent error(String message, [SeqContext? context]) {
     return SeqEvent.now(message, SeqLogLevel.error.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.fatal] event.
-  static SeqEvent fatal(String message, SeqContext? context) {
+  static SeqEvent fatal(String message, [SeqContext? context]) {
     return SeqEvent.now(message, SeqLogLevel.fatal.value, null, null, context);
   }
 
