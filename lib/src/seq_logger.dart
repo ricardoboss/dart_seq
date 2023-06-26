@@ -100,6 +100,7 @@ class SeqLogger {
   Future<void> log(
     SeqLogLevel level,
     String message, [
+    Object? exception,
     SeqContext? context,
   ]) async {
     if (context != null && context.isEmpty) {
@@ -110,4 +111,24 @@ class SeqLogger {
 
     await send(event);
   }
+
+  Future<void> verbose(String message, [SeqContext? context]) =>
+      log(SeqLogLevel.verbose, message, null, context);
+
+  Future<void> debug(String message, [SeqContext? context]) =>
+      log(SeqLogLevel.debug, message, null, context);
+
+  Future<void> info(String message, [SeqContext? context]) =>
+      log(SeqLogLevel.information, message, null, context);
+
+  Future<void> warning(String message, [SeqContext? context]) =>
+      log(SeqLogLevel.warning, message, null, context);
+
+  Future<void> error(String message,
+          [Object? exception, SeqContext? context]) =>
+      log(SeqLogLevel.error, message, exception, context);
+
+  Future<void> fatal(String message,
+          [Object? exception, SeqContext? context]) =>
+      log(SeqLogLevel.fatal, message, exception, context);
 }
