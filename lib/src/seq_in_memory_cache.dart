@@ -10,8 +10,8 @@ class SeqInMemoryCache implements SeqCache {
   }
 
   @override
-  Stream<SeqEvent> take() async* {
-    while (_events.isNotEmpty) {
+  Stream<SeqEvent> take(int count) async* {
+    for (int i = 0; i < count && _events.isNotEmpty; i++) {
       yield _events.removeAt(0);
     }
   }
