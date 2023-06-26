@@ -1,5 +1,4 @@
-`dart_seq` is a powerful and versatile logging solution for Dart, designed to simplify the process of sending log entries to a Seq server.
-It supports all platforms supported by Dart, including Windows, Android, iOS, macOS, and Web, making it a versatile choice for logging in various Dart applications.
+`dart_seq` is a powerful and versatile logging solution for Dart, designed to simplify the process of sending log entries to a Seq server. It supports all platforms supported by Dart, including Windows, Android, iOS, macOS, and Web, making it a versatile choice for logging in various Dart applications.
 
 ## Features
 
@@ -13,9 +12,9 @@ It supports all platforms supported by Dart, including Windows, Android, iOS, ma
 With `dart_seq`, logging in your Dart applications becomes a breeze, ensuring that your logs are efficiently delivered to Seq servers across multiple platforms.
 The library's batch sending, automatic retry, and minimum log level enforcement features enhance the logging experience and provide robustness and flexibility to your logging infrastructure.
 
-## Getting started
+## Getting Started
 
-To start using dart_seq in your Dart application, follow these steps:
+To start using `dart_seq` in your Dart application, follow these steps:
 
 1. Install the library using `dart pub add dart_seq`
 2. Import the package: `import 'package:dart_seq/dart_seq.dart';`
@@ -44,4 +43,5 @@ logger.flush();
 
 ## Additional information
 
-Feature requests and bug reports should be reported using [GitHub issues](https://github.com/ricardoboss/dart_seq/issues).
+- Feature requests and bug reports should be reported using [GitHub issues](https://github.com/ricardoboss/dart_seq/issues).
+- Contributions are welcome! If you'd like to contribute, please follow the guidelines outlined in the [CONTRIBUTING.md](./CONTRIBUTING.md) file.
