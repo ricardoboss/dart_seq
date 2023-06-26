@@ -1,3 +1,4 @@
 ## 0.0.1
 
-* TODO: Describe initial release.
+* Initial release 🎉
+* Added `SeqLogger` with support for logging to the HTTP ingestion endpoint of an Seq server
