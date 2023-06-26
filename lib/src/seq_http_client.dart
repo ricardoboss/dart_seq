@@ -63,8 +63,8 @@ class SeqHttpClient implements SeqClient {
       } catch (e) {
         lastException = e;
       }
-    } while (![201, 429].contains(response?.statusCode) &&
-        ++tries < _maxRetries);
+    } while (
+        ![201, 429].contains(response?.statusCode) && ++tries < _maxRetries);
 
     if (lastException != null) {
       throw lastException;
