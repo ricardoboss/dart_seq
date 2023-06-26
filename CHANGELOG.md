@@ -2,6 +2,7 @@
 
 * Remove dependency on `flutter` SDK
 * The `context` parameter on `SeqEvent.<level>()` methods is now optional
+* Added more convenience methods to `SeqLogger`
 
 ## 0.0.1
 
