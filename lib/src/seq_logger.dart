@@ -1,8 +1,4 @@
-import 'package:dart_seq/src/seq_client.dart';
-import 'package:dart_seq/src/seq_context.dart';
-import 'package:dart_seq/src/seq_event.dart';
-import 'package:dart_seq/src/seq_log_level.dart';
-import 'package:dart_seq/src/seq_logger_configuration.dart';
+import 'package:dart_seq/dart_seq.dart';
 
 class SeqLogger {
   static int compareLevels(String? a, String? b) {
@@ -28,26 +24,50 @@ class SeqLogger {
     };
   }
 
-  final SeqClient client;
-  final SeqLoggerConfiguration configuration;
-  late final Map<String, dynamic>? globalContext;
+  factory SeqLogger.http({
+    required String host,
+    String? apiKey,
+    int maxRetries = 5,
+    SeqCache? cache,
+    int backlogLimit = 50,
+    SeqContext? globalContext,
+    String? minimumLogLevel,
+  }) {
+    final httpConfig = SeqHttpClientConfiguration(host, apiKey, maxRetries);
+    final httpClient = SeqHttpClient(httpConfig);
 
-  final List<SeqEvent> _events = [];
+    final actualCache = cache ?? SeqInMemoryCache();
 
-  String? minimumLogLevel;
-
-  SeqLogger({required this.configuration, required this.client}) {
-    if (configuration.globalContext != null) {
-      globalContext = configuration.globalContext;
-    } else {
-      globalContext = null;
-    }
-
-    minimumLogLevel = configuration.minimumLogLevel;
+    return SeqLogger(
+      client: httpClient,
+      cache: actualCache,
+      backlogLimit: backlogLimit,
+      globalContext: globalContext,
+      minimumLogLevel: minimumLogLevel,
+    );
   }
 
-  Future<void> send(Iterable<SeqEvent> events) async {
-    events.map(addContext).where(shouldLog).forEach(_events.add);
+  final SeqClient client;
+  final SeqCache cache;
+  final int backlogLimit;
+  final SeqContext? globalContext;
+  String? minimumLogLevel;
+
+  SeqLogger({
+    required this.client,
+    required this.cache,
+    this.backlogLimit = 50,
+    this.globalContext,
+    this.minimumLogLevel,
+  }) : assert(backlogLimit >= 0, "backlogLimit must be >= 0");
+
+  Future<void> send(SeqEvent event) async {
+    event = addContext(event);
+    if (!shouldLog(event)) {
+      return;
+    }
+
+    await cache.record(event);
 
     if (shouldFlush()) {
       await flush();
@@ -63,17 +83,28 @@ class SeqLogger {
         compareLevels(minimumLogLevel, event.level) <= 0;
   }
 
-  bool shouldFlush() => _events.length >= configuration.backlogLimit;
+  bool shouldFlush() => cache.count >= backlogLimit;
 
-  Future<void> flush() async => client.sendEvents(_events);
+  Future<void> flush() async {
+    await client.sendEvents(cache.take());
 
-  Future<void> log(SeqLogLevel level, String message, [SeqContext? context]) async {
+    final newLogLevel = client.minimumLevelAccepted;
+    if (minimumLogLevel != newLogLevel) {
+      minimumLogLevel = newLogLevel;
+    }
+  }
+
+  Future<void> log(
+    SeqLogLevel level,
+    String message, [
+    SeqContext? context,
+  ]) async {
     if (context != null && context.isEmpty) {
       context = null;
     }
 
     final event = SeqEvent.now(message, level.value, null, null, context);
 
-    await send([event]);
+    await send(event);
   }
 }

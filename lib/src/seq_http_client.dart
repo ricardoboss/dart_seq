@@ -24,8 +24,9 @@ class SeqHttpClient implements SeqClient {
   String? get minimumLevelAccepted => _minimumLevelAccepted;
 
   @override
-  Future<void> sendEvents(List<SeqEvent> events) async {
-    final body = collapseEvents(events);
+  Future<void> sendEvents(Stream<SeqEvent> events) async {
+    final eventsList = await events.toList();
+    final body = collapseEvents(eventsList);
     if (body.isEmpty) return;
 
     final response = await sendRequest(body);
