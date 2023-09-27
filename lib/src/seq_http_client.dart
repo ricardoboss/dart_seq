@@ -7,9 +7,12 @@ import 'package:dart_seq/src/seq_client_exception.dart';
 import 'package:dart_seq/src/seq_event.dart';
 import 'package:dart_seq/src/seq_response.dart';
 
+Duration linearBackoff(int tries) => Duration(milliseconds: tries * 100);
+
 /// A HTTP ingestion client for Seq. Implements the [SeqClient] interface.
 class SeqHttpClient implements SeqClient {
-  final String? _apiKey;
+  final Map<String, String> _headers;
+  final Duration Function(int tries) _backoff;
   final int _maxRetries;
   final Uri _endpoint;
 
@@ -19,13 +22,19 @@ class SeqHttpClient implements SeqClient {
     required String host,
     String? apiKey,
     int maxRetries = 5,
-  })  : assert(host.isNotEmpty, "host must not be empty"),
+    Duration Function(int tries)? backoff,
+  })
+      : assert(host.isNotEmpty, "host must not be empty"),
         assert(host.startsWith('http'), "the host must contain a scheme"),
         assert(null == apiKey || apiKey.isNotEmpty, "apiKey must not be empty"),
         assert(maxRetries >= 0, "maxRetries must be >= 0"),
-        _apiKey = apiKey,
+        _headers = {
+          'Content-Type': 'application/vnd.serilog.clef',
+          if (apiKey != null) 'X-Seq-ApiKey': apiKey,
+        },
         _maxRetries = maxRetries,
-        _endpoint = Uri.parse("$host/api/events/raw");
+        _endpoint = Uri.parse("$host/api/events/raw"),
+        _backoff = backoff ?? linearBackoff;
 
   @override
   String? get minimumLevelAccepted => _minimumLevelAccepted;
@@ -44,27 +53,26 @@ class SeqHttpClient implements SeqClient {
       events.reversed.map(jsonEncode).join("\n");
 
   Future<http.Response> sendRequest(String body) async {
-    final apiKey = _apiKey;
-    var tries = 0;
-
     http.Response? response;
     Object? lastException;
 
+    var tries = 0;
+
+    const noRetryStatusCodes = [201, 400, 401, 403, 413, 429, 500];
     do {
       try {
         response = await http.post(
           _endpoint,
-          headers: {
-            'Content-Type': 'application/vnd.serilog.clef',
-            if (apiKey != null) 'X-Seq-ApiKey': apiKey,
-          },
+          headers: _headers,
           body: body,
         );
       } catch (e) {
         lastException = e;
+
+        await Future.delayed(_backoff(tries));
       }
     } while (
-        ![201, 429].contains(response?.statusCode) && ++tries < _maxRetries);
+        !noRetryStatusCodes.contains(response?.statusCode) && ++tries < _maxRetries);
 
     if (lastException != null) {
       throw lastException;
