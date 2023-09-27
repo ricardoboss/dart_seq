@@ -1,3 +1,8 @@
+## 0.0.4
+
+* Some small optimizations
+* Implemented linear backoff for `SeqHttpClient` retries
+
 ## 0.0.3
 
 * Downgraded `http` dependency to at most `^0.13.3` for more compatibility
