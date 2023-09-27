@@ -10,8 +10,13 @@ class SeqEvent {
   /// and [context]. The timestamp is set to [DateTime.now()] and values
   /// included in [context] are rendered to representations suitable for JSON
   /// encoding.
-  static SeqEvent now(String? message,
-      [String? level, int? id, Object? exception, SeqContext? context]) {
+  static SeqEvent now(
+    String? message, [
+    String? level,
+    int? id,
+    Object? exception,
+    SeqContext? context,
+  ]) {
     final time = DateTime.now();
     final renderings =
         context?.map((key, value) => MapEntry(key, _renderValue(value)));
@@ -22,11 +27,7 @@ class SeqEvent {
   }
 
   static dynamic _renderValue(dynamic value) {
-    if (value is num || value is bool || null == value) {
-      return value;
-    }
-
-    if (value is String) {
+    if (value is num || value is bool || value is String || null == value) {
       return value;
     }
 
