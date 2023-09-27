@@ -107,7 +107,7 @@ class SeqLogger {
       context = null;
     }
 
-    final event = SeqEvent.now(message, level.value, null, null, context);
+    final event = SeqEvent.now(message, level.value, null, exception, context);
 
     await send(event);
   }
