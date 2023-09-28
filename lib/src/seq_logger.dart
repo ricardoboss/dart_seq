@@ -32,6 +32,7 @@ class SeqLogger {
     int backlogLimit = 50,
     SeqContext? globalContext,
     String? minimumLogLevel,
+    bool autoFlush = true,
   }) {
     final httpClient = SeqHttpClient(
       host: host,
@@ -47,6 +48,7 @@ class SeqLogger {
       backlogLimit: backlogLimit,
       globalContext: globalContext,
       minimumLogLevel: minimumLogLevel,
+      autoFlush: autoFlush,
     );
   }
 
@@ -54,6 +56,7 @@ class SeqLogger {
   final SeqCache cache;
   final int backlogLimit;
   final SeqContext? globalContext;
+  final bool autoFlush;
   String? minimumLogLevel;
 
   SeqLogger({
@@ -62,6 +65,7 @@ class SeqLogger {
     this.backlogLimit = 50,
     this.globalContext,
     this.minimumLogLevel,
+    this.autoFlush = true,
   }) : assert(backlogLimit >= 0, "backlogLimit must be >= 0");
 
   Future<void> send(SeqEvent event) async {
@@ -72,7 +76,7 @@ class SeqLogger {
 
     await cache.record(event);
 
-    if (shouldFlush()) {
+    if (autoFlush && shouldFlush()) {
       await flush();
     }
   }

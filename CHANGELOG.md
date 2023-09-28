@@ -1,3 +1,7 @@
+## 0.0.5
+
+* Added ability to turn off auto flushing
+
 ## 0.0.4
 
 * Some small optimizations
