@@ -1,3 +1,11 @@
+## 0.1.0
+
+* Changed `SeqCache` interface to differentiate between retrieving and removing events
+* The `SeqClient.sendEvents` method now takes a `List` instead of a `Stream`
+* The `SeqClientException` can now optionally hold a causing exception and stack trace
+* The `SeqHttpClient` wraps exceptions from the `http` package in `SeqClientException`s
+* Events are now only removed from cache when they have actually been sent
+
 ## 0.0.5
 
 * Added ability to turn off auto flushing
