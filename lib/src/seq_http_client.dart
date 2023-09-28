@@ -1,11 +1,7 @@
 import 'dart:convert';
 
+import 'package:dart_seq/dart_seq.dart';
 import 'package:http/http.dart' as http;
-
-import 'package:dart_seq/src/seq_client.dart';
-import 'package:dart_seq/src/seq_client_exception.dart';
-import 'package:dart_seq/src/seq_event.dart';
-import 'package:dart_seq/src/seq_response.dart';
 
 Duration linearBackoff(int tries) => Duration(milliseconds: tries * 100);
 
@@ -23,8 +19,7 @@ class SeqHttpClient implements SeqClient {
     String? apiKey,
     int maxRetries = 5,
     Duration Function(int tries)? backoff,
-  })
-      : assert(host.isNotEmpty, "host must not be empty"),
+  })  : assert(host.isNotEmpty, "host must not be empty"),
         assert(host.startsWith('http'), "the host must contain a scheme"),
         assert(null == apiKey || apiKey.isNotEmpty, "apiKey must not be empty"),
         assert(maxRetries >= 0, "maxRetries must be >= 0"),
@@ -42,7 +37,11 @@ class SeqHttpClient implements SeqClient {
   @override
   Future<void> sendEvents(List<SeqEvent> events) async {
     final body = collapseEvents(events);
-    if (body.isEmpty) return;
+    if (body.isEmpty) {
+      SeqLogger.diagnosticLog(SeqLogLevel.verbose, "No events to send.");
+
+      return;
+    }
 
     http.Response response;
     try {
@@ -74,10 +73,19 @@ class SeqHttpClient implements SeqClient {
       } catch (e) {
         lastException = e;
 
-        await Future.delayed(_backoff(tries));
+        final backoffDuration = _backoff(tries);
+
+        SeqLogger.diagnosticLog(
+          SeqLogLevel.error,
+          "Error when sending request. Backing off by {BackoffDuration}s",
+          e,
+          {'BackoffDuration': backoffDuration.inSeconds},
+        );
+
+        await Future.delayed(backoffDuration);
       }
-    } while (
-        !noRetryStatusCodes.contains(response?.statusCode) && ++tries < _maxRetries);
+    } while (!noRetryStatusCodes.contains(response?.statusCode) &&
+        ++tries < _maxRetries);
 
     if (lastException != null) {
       throw lastException;
@@ -112,7 +120,8 @@ class SeqHttpClient implements SeqClient {
           "An internal error prevented the events from being ingested; check Seq's diagnostic log for more information: $problem"),
       503 => SeqClientException(
           "The Seq server is starting up and can't currently service the request, or, free storage space has fallen below the minimum required threshold; this status code may also be returned by HTTP proxies and other network infrastructure when Seq is unreachable: $problem"),
-      _ => SeqClientException("Unexpected status code (${response.statusCode}). Error: $problem"),
+      _ => SeqClientException(
+          "Unexpected status code (${response.statusCode}). Error: $problem"),
     };
   }
 }

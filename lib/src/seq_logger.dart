@@ -24,6 +24,19 @@ class SeqLogger {
     };
   }
 
+  static void Function(SeqEvent event)? onDiagnosticLog;
+
+  static void diagnosticLog(
+    SeqLogLevel level,
+    String message, [
+    Object? exception,
+    SeqContext? context,
+  ]) {
+    final event = SeqEvent.now(message, level.name, 0, exception, context);
+
+    onDiagnosticLog?.call(event);
+  }
+
   factory SeqLogger.http({
     required String host,
     String? apiKey,
@@ -69,10 +82,11 @@ class SeqLogger {
   }) : assert(backlogLimit >= 0, "backlogLimit must be >= 0");
 
   Future<void> send(SeqEvent event) async {
-    event = addContext(event);
     if (!shouldLog(event)) {
       return;
     }
+
+    event = addContext(event);
 
     await cache.record(event);
 
@@ -93,6 +107,8 @@ class SeqLogger {
   bool shouldFlush() => cache.count >= backlogLimit;
 
   Future<void> flush() async {
+    diagnosticLog(SeqLogLevel.verbose, "Flushing events");
+
     final eventsToBeSent = await cache.peek(backlogLimit).toList();
 
     await client.sendEvents(eventsToBeSent);
@@ -101,6 +117,13 @@ class SeqLogger {
 
     final newLogLevel = client.minimumLevelAccepted;
     if (minimumLogLevel != newLogLevel) {
+      diagnosticLog(
+        SeqLogLevel.verbose,
+        "Accepted new log level {MinimumLogLevel}",
+        null,
+        {'MinimumLogLevel': newLogLevel},
+      );
+
       minimumLogLevel = newLogLevel;
     }
   }

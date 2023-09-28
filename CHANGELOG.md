@@ -1,3 +1,7 @@
+## 0.1.1
+
+* Added `diagnosticLog` and `onDiagnosticLog` to `SeqLogger` to track internal logs
+
 ## 0.1.0
 
 * Changed `SeqCache` interface to differentiate between retrieving and removing events
