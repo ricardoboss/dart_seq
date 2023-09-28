@@ -93,7 +93,11 @@ class SeqLogger {
   bool shouldFlush() => cache.count >= backlogLimit;
 
   Future<void> flush() async {
-    await client.sendEvents(cache.take(backlogLimit));
+    final eventsToBeSent = await cache.peek(backlogLimit).toList();
+
+    await client.sendEvents(eventsToBeSent);
+
+    await cache.remove(eventsToBeSent.length);
 
     final newLogLevel = client.minimumLevelAccepted;
     if (minimumLogLevel != newLogLevel) {

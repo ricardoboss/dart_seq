@@ -8,7 +8,7 @@ abstract class SeqClient {
   /// Calling this method causes the events contained in the [events] stream to
   /// be sent to the Seq server. The future returned by this method is not
   /// guaranteed to be awaited, so implementers should not rely on it.
-  Future<void> sendEvents(Stream<SeqEvent> events);
+  Future<void> sendEvents(List<SeqEvent> events);
 
   /// Returns the minimum level accepted by the Seq server.
   String? get minimumLevelAccepted;

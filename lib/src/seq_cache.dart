@@ -13,8 +13,14 @@ abstract class SeqCache {
   /// guaranteed to be awaited, so implementers should not rely on it.
   Future<void> record(SeqEvent event);
 
-  /// Returns [count] events stored in the cache. After an event is read from
-  /// the stream, it SHOULD no longer be included in the [SeqCache.count] and
-  /// MUST not be returned by [take] again.
-  Stream<SeqEvent> take(int count);
+  /// Returns [count] events stored in the cache.
+  /// The returned stream contains the next [count] events in the cache, or all
+  /// events if [count] is greater than the number of events in the cache.
+  /// The returned events are not removed from the cache.
+  Stream<SeqEvent> peek(int count);
+
+  /// Removes [count] events from the cache.
+  /// The returned stream contains the next [count] events in the cache, or all
+  /// events if [count] is greater than the number of events in the cache.
+  Future<void> remove(int count);
 }

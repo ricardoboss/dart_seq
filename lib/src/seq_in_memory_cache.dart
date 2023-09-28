@@ -10,12 +10,21 @@ class SeqInMemoryCache implements SeqCache {
   }
 
   @override
-  Stream<SeqEvent> take(int count) async* {
-    for (int i = 0; i < count && _events.isNotEmpty; i++) {
-      yield _events.removeAt(0);
+  Stream<SeqEvent> peek(int count) async* {
+    final max = count.clamp(0, this.count);
+
+    for (int i = 0; i < max; i++) {
+      yield _events.elementAt(i);
     }
   }
 
   @override
   int get count => _events.length;
+
+  @override
+  Future<void> remove(int count) async {
+    final max = count.clamp(0, this.count);
+
+    _events.removeRange(0, max);
+  }
 }
