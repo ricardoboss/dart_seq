@@ -1,3 +1,7 @@
+## 0.1.2
+
+* Expose `backoff` property via `SeqLogger.http` factory
+
 ## 0.1.1
 
 * Added `diagnosticLog` and `onDiagnosticLog` to `SeqLogger` to track internal logs

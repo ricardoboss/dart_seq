@@ -46,11 +46,13 @@ class SeqLogger {
     SeqContext? globalContext,
     String? minimumLogLevel,
     bool autoFlush = true,
+    Duration Function(int tries)? httpBackoff,
   }) {
     final httpClient = SeqHttpClient(
       host: host,
       apiKey: apiKey,
       maxRetries: maxRetries,
+      backoff: httpBackoff,
     );
 
     final actualCache = cache ?? SeqInMemoryCache();
