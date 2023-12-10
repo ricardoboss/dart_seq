@@ -4,7 +4,7 @@
 ![Pub Likes](https://img.shields.io/pub/likes/dart_seq)
 ![Pub Popularity](https://img.shields.io/pub/popularity/dart_seq)
 
-`dart_seq` is a powerful and versatile logging solution for Dart, designed to simplify the process of sending log entries to a Seq server. It supports all platforms supported by Dart, including Windows, Android, iOS, macOS, and Web, making it a versatile choice for logging in various Dart applications.
+`dart_seq` is a powerful and versatile logging solution for Dart, designed to simplify the process of sending log entries to a Seq server. It supports all platforms supported by Dart, including Windows, Android, iOS, macOS, Linux and Web, making it a versatile choice for logging in various Dart applications.
 
 ## Features
 
