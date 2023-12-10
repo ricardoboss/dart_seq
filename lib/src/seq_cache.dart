@@ -20,7 +20,5 @@ abstract class SeqCache {
   Stream<SeqEvent> peek(int count);
 
   /// Removes [count] events from the cache.
-  /// The returned stream contains the next [count] events in the cache, or all
-  /// events if [count] is greater than the number of events in the cache.
   Future<void> remove(int count);
 }
