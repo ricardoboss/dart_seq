@@ -40,7 +40,7 @@ final logger = SeqLogger.http(
 
 // add log events
 logger.log(SeqLogLevel.information, "test, dart: {Dart}", {
-"Dart": Platform.version,
+  "Dart": Platform.version,
 });
 
 // don't forget to flush your logs at the end!
@@ -51,3 +51,10 @@ logger.flush();
 
 - Feature requests and bug reports should be reported using [GitHub issues](https://github.com/ricardoboss/dart_seq/issues).
 - Contributions are welcome! If you'd like to contribute, please follow the guidelines outlined in the [CONTRIBUTING.md](./CONTRIBUTING.md) file.
+
+## License
+
+`dart_seq` is licensed under the MIT License. See the [LICENSE](./LICENSE) file for more information.
+
+This project is not affiliated with [Datalust](https://datalust.co/), the creators of Seq. The
+library is an independent open-source project developed by the community for the community.
