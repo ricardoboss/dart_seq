@@ -19,67 +19,6 @@ class SeqEvent {
     this.context,
   );
 
-  /// Creates an event with the given [message], [level], [id], [exception],
-  /// and [context]. The timestamp is set to [DateTime.now()] and values
-  /// included in [context] are rendered to representations suitable for JSON
-  /// encoding.
-  factory SeqEvent.now(
-    String? message, [
-    String? level,
-    int? id,
-    Object? exception,
-    SeqContext? context,
-  ]) {
-    final time = DateTime.now();
-    final renderings =
-        context?.map((key, value) => MapEntry(key, _renderValue(value)));
-    final m = renderings == null ? message : null;
-    final mt = renderings == null ? null : message;
-
-    return SeqEvent(time, m, mt, level, exception, id, renderings, context);
-  }
-
-  /// Creates a [SeqLogLevel.verbose] event.
-  factory SeqEvent.verbose(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.verbose.value, null, null, context);
-  }
-
-  /// Creates a [SeqLogLevel.debug] event.
-  factory SeqEvent.debug(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.debug.value, null, null, context);
-  }
-
-  /// Creates a [SeqLogLevel.information] event.
-  factory SeqEvent.info(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.information.value, null, null, context);
-  }
-
-  /// Creates a [SeqLogLevel.warning] event.
-  factory SeqEvent.warning(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.warning.value, null, null, context);
-  }
-
-  /// Creates a [SeqLogLevel.error] event.
-  factory SeqEvent.error(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.error.value, null, null, context);
-  }
-
-  /// Creates a [SeqLogLevel.fatal] event.
-  factory SeqEvent.fatal(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.fatal.value, null, null, context);
-  }
-
-  static dynamic _renderValue(dynamic value) {
-    if (value is num || value is bool || value is String || null == value) {
-      return value;
-    }
-
-    return jsonEncode(value);
-  }
-
   factory SeqEvent.fromMap(Map<String, dynamic> map) {
     DateTime? timestamp;
     String? message;
@@ -136,6 +75,67 @@ class SeqEvent {
       renderings,
       context,
     );
+  }
+
+  /// Creates an event with the given [message], [level], [id], [exception],
+  /// and [context]. The timestamp is set to [DateTime.now()] and values
+  /// included in [context] are rendered to representations suitable for JSON
+  /// encoding.
+  factory SeqEvent.now(
+    String? message, [
+    String? level,
+    int? id,
+    Object? exception,
+    SeqContext? context,
+  ]) {
+    final time = DateTime.now();
+    final renderings =
+        context?.map((key, value) => MapEntry(key, _renderValue(value)));
+    final m = renderings == null ? message : null;
+    final mt = renderings == null ? null : message;
+
+    return SeqEvent(time, m, mt, level, exception, id, renderings, context);
+  }
+
+  /// Creates a [SeqLogLevel.verbose] event.
+  factory SeqEvent.verbose(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.verbose.value, null, null, context,);
+  }
+
+  /// Creates a [SeqLogLevel.debug] event.
+  factory SeqEvent.debug(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.debug.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.information] event.
+  factory SeqEvent.info(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.information.value, null, null, context,);
+  }
+
+  /// Creates a [SeqLogLevel.warning] event.
+  factory SeqEvent.warning(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.warning.value, null, null, context,);
+  }
+
+  /// Creates a [SeqLogLevel.error] event.
+  factory SeqEvent.error(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.error.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.fatal] event.
+  factory SeqEvent.fatal(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.fatal.value, null, null, context);
+  }
+
+  static dynamic _renderValue(dynamic value) {
+    if (value is num || value is bool || value is String || null == value) {
+      return value;
+    }
+
+    return jsonEncode(value);
   }
 
   /// The timestamp of the event.
