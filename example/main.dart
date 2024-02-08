@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:dart_seq/dart_seq.dart';
 
-void main() {
+Future<void> main() async {
   final logger = SeqLogger.http(
     host: 'http://localhost:5341',
     globalContext: {
@@ -10,9 +10,9 @@ void main() {
     },
   );
 
-  logger.log(SeqLogLevel.information, 'test, dart: {Dart}', {
+  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', {
     'Dart': Platform.version,
   });
 
-  logger.flush();
+  await logger.flush();
 }
