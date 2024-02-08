@@ -4,11 +4,14 @@ import 'package:dart_seq/dart_seq.dart';
 /// one or more events to the Seq server.
 class SeqClientException extends Error {
   /// Creates a [SeqClientException] with the given message.
-  SeqClientException(this.message, [this.innerException]);
+  SeqClientException(this.message, [this.innerException, this.innerStackTrace]);
 
   /// The exception message.
   final String message;
 
   /// The exception that caused this exception, if any.
   final Object? innerException;
+
+  /// The stack trace of the exception that caused this exception, if any.
+  final StackTrace? innerStackTrace;
 }
