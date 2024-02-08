@@ -6,11 +6,24 @@ import 'package:dart_seq/src/seq_log_level.dart';
 /// This class represents a single Seq event. It includes metadata like the
 /// timestamp and also the actual message and context.
 class SeqEvent {
+  /// Creates an event with the given [timestamp], [message]/[messageTemplate],
+  /// [level], [exception], [id], [renderings], and [context].
+  SeqEvent(
+    this.timestamp,
+    this.message,
+    this.messageTemplate,
+    this.level,
+    this.exception,
+    this.id,
+    this.renderings,
+    this.context,
+  );
+
   /// Creates an event with the given [message], [level], [id], [exception],
   /// and [context]. The timestamp is set to [DateTime.now()] and values
   /// included in [context] are rendered to representations suitable for JSON
   /// encoding.
-  static SeqEvent now(
+  factory SeqEvent.now(
     String? message, [
     String? level,
     int? id,
@@ -26,6 +39,39 @@ class SeqEvent {
     return SeqEvent(time, m, mt, level, exception, id, renderings, context);
   }
 
+  /// Creates a [SeqLogLevel.verbose] event.
+  factory SeqEvent.verbose(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.verbose.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.debug] event.
+  factory SeqEvent.debug(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.debug.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.information] event.
+  factory SeqEvent.info(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.information.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.warning] event.
+  factory SeqEvent.warning(String message, [SeqContext? context]) {
+    return SeqEvent.now(
+        message, SeqLogLevel.warning.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.error] event.
+  factory SeqEvent.error(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.error.value, null, null, context);
+  }
+
+  /// Creates a [SeqLogLevel.fatal] event.
+  factory SeqEvent.fatal(String message, [SeqContext? context]) {
+    return SeqEvent.now(message, SeqLogLevel.fatal.value, null, null, context);
+  }
+
   static dynamic _renderValue(dynamic value) {
     if (value is num || value is bool || value is String || null == value) {
       return value;
@@ -34,37 +80,62 @@ class SeqEvent {
     return jsonEncode(value);
   }
 
-  /// Creates a [SeqLogLevel.verbose] event.
-  static SeqEvent verbose(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.verbose.value, null, null, context);
-  }
+  factory SeqEvent.fromMap(Map<String, dynamic> map) {
+    DateTime? timestamp;
+    String? message;
+    String? messageTemplate;
+    String? level;
+    Object? exception;
+    int? id;
+    Map<String, dynamic>? renderings;
+    SeqContext? context;
 
-  /// Creates a [SeqLogLevel.debug] event.
-  static SeqEvent debug(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.debug.value, null, null, context);
-  }
+    void addToContext(MapEntry<String, dynamic> entry) {
+      context ??= <String, dynamic>{};
 
-  /// Creates a [SeqLogLevel.information] event.
-  static SeqEvent info(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.information.value, null, null, context);
-  }
+      context![entry.key] = entry.value;
+    }
 
-  /// Creates a [SeqLogLevel.warning] event.
-  static SeqEvent warning(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-        message, SeqLogLevel.warning.value, null, null, context);
-  }
+    for (final e in map.entries) {
+      if (e.value is String) {
+        final value = e.value as String;
 
-  /// Creates a [SeqLogLevel.error] event.
-  static SeqEvent error(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.error.value, null, null, context);
-  }
+        if (e.key == '@t') {
+          timestamp = DateTime.parse(value);
+        } else if (e.key == '@m') {
+          message = value;
+        } else if (e.key == '@mt') {
+          messageTemplate = value;
+        } else if (e.key == '@l') {
+          level = value;
+        } else if (e.key == '@i') {
+          id = int.parse(value);
+        } else {
+          addToContext(e);
+        }
+      } else if (e.value is Map && e.key == '@r') {
+        renderings = e.value as Map<String, dynamic>;
+      } else {
+        if (e.key == '@x') {
+          exception = e.value;
+        } else {
+          addToContext(e);
+        }
+      }
+    }
 
-  /// Creates a [SeqLogLevel.fatal] event.
-  static SeqEvent fatal(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.fatal.value, null, null, context);
+    timestamp ??= DateTime.now();
+
+    return SeqEvent(
+      timestamp,
+      message,
+      messageTemplate,
+      level,
+      exception,
+      id,
+      renderings,
+      context,
+    );
   }
 
   /// The timestamp of the event.
@@ -95,23 +166,13 @@ class SeqEvent {
   /// Any context relevant for this event.
   final SeqContext? context;
 
-  /// Creates an event with the given [timestamp], [message]/[messageTemplate],
-  /// [level], [exception], [id], [renderings], and [context].
-  SeqEvent(
-    this.timestamp,
-    this.message,
-    this.messageTemplate,
-    this.level,
-    this.exception,
-    this.id,
-    this.renderings,
-    this.context,
-  );
-
   /// Returns a copy of this event with the given [context] merged into the
   /// existing context, if any.
   SeqEvent withAddedContext(SeqContext? context) {
-    if (context == null) return this;
+    if (context == null) {
+      return this;
+    }
+
     final newContext = {
       ...?this.context,
       ...context,
@@ -134,7 +195,7 @@ class SeqEvent {
 
   /// Returns this event as a map compatible with the GELF logging format.
   Map<String, dynamic> toMap() {
-    final Map<String, dynamic> data = {
+    final data = <String, dynamic>{
       '@t': timestamp.toUtc().toIso8601String(),
     };
 
@@ -163,10 +224,10 @@ class SeqEvent {
     }
 
     if (context != null) {
-      for (var e in context!.entries) {
+      for (final e in context!.entries) {
         var key = e.key;
-        if (key[0] == "@") {
-          key = "@$key";
+        if (key[0] == '@') {
+          key = '@$key';
         }
 
         data[key] = e.value;
@@ -174,51 +235,5 @@ class SeqEvent {
     }
 
     return data;
-  }
-
-  factory SeqEvent.fromMap(Map<String, dynamic> map) {
-    DateTime? timestamp;
-    String? message;
-    String? messageTemplate;
-    String? level;
-    Object? exception;
-    int? id;
-    Map<String, dynamic>? renderings;
-    SeqContext? context;
-
-    for (final e in map.entries) {
-      if (e.key == "@t") {
-        timestamp = DateTime.parse(e.value);
-      } else if (e.key == "@m") {
-        message = e.value;
-      } else if (e.key == "@mt") {
-        messageTemplate = e.value;
-      } else if (e.key == "@l") {
-        level = e.value;
-      } else if (e.key == "@x") {
-        exception = e.value;
-      } else if (e.key == "@r") {
-        renderings = e.value;
-      } else if (e.key == "@i") {
-        id = int.parse(e.value);
-      } else {
-        context ??= <String, dynamic>{};
-
-        context[e.key] = e.value;
-      }
-    }
-
-    timestamp ??= DateTime.now();
-
-    return SeqEvent(
-      timestamp,
-      message,
-      messageTemplate,
-      level,
-      exception,
-      id,
-      renderings,
-      context,
-    );
   }
 }
