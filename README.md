@@ -30,21 +30,23 @@ To start using `dart_seq` in your Dart application, follow these steps:
 ## Usage
 
 ```dart
-// configure your logger
-final logger = SeqLogger.http(
-  host: "http://localhost:5341",
-  globalContext: {
-    "Environment": Platform.environment,
-  }
-);
+Future<void> main() async {
+  // configure your logger
+  final logger = SeqLogger.http(
+    host: 'http://localhost:5341',
+    globalContext: {
+      'Environment': Platform.environment,
+    },
+  );
 
-// add log events
-logger.log(SeqLogLevel.information, "test, dart: {Dart}", {
-  "Dart": Platform.version,
-});
+  // add log events
+  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', null, {
+    'Dart': Platform.version,
+  });
 
-// don't forget to flush your logs at the end!
-logger.flush();
+  // don't forget to flush your logs at the end!
+  await logger.flush();
+}
 ```
 
 ## Additional information

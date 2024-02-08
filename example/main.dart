@@ -10,7 +10,7 @@ Future<void> main() async {
     },
   );
 
-  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', {
+  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', null, {
     'Dart': Platform.version,
   });
 
