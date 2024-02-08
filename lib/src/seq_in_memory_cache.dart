@@ -1,6 +1,7 @@
 import 'package:dart_seq/src/seq_cache.dart';
 import 'package:dart_seq/src/seq_event.dart';
 
+/// Keeps the events in memory, in a list.
 class SeqInMemoryCache implements SeqCache {
   final List<SeqEvent> _events = <SeqEvent>[];
 
@@ -13,7 +14,7 @@ class SeqInMemoryCache implements SeqCache {
   Stream<SeqEvent> peek(int count) async* {
     final max = count.clamp(0, this.count);
 
-    for (int i = 0; i < max; i++) {
+    for (var i = 0; i < max; i++) {
       yield _events.elementAt(i);
     }
   }
