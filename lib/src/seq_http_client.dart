@@ -116,16 +116,21 @@ class SeqHttpClient implements SeqClient {
       400 => SeqClientException('The request was malformed: $problem'),
       401 => SeqClientException('Authorization is required: $problem'),
       403 => SeqClientException(
-          "The provided credentials don't have ingestion permission: $problem",),
+          "The provided credentials don't have ingestion permission: $problem",
+        ),
       413 => SeqClientException(
-          'The payload itself exceeds the configured maximum size: $problem',),
+          'The payload itself exceeds the configured maximum size: $problem',
+        ),
       429 => SeqClientException('Too many requests'),
       500 => SeqClientException(
-          "An internal error prevented the events from being ingested; check Seq's diagnostic log for more information: $problem",),
+          "An internal error prevented the events from being ingested; check Seq's diagnostic log for more information: $problem",
+        ),
       503 => SeqClientException(
-          "The Seq server is starting up and can't currently service the request, or, free storage space has fallen below the minimum required threshold; this status code may also be returned by HTTP proxies and other network infrastructure when Seq is unreachable: $problem",),
+          "The Seq server is starting up and can't currently service the request, or, free storage space has fallen below the minimum required threshold; this status code may also be returned by HTTP proxies and other network infrastructure when Seq is unreachable: $problem",
+        ),
       _ => SeqClientException(
-          'Unexpected status code (${response.statusCode}). Error: $problem',),
+          'Unexpected status code (${response.statusCode}). Error: $problem',
+        ),
     };
   }
 }

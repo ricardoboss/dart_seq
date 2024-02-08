@@ -100,7 +100,12 @@ class SeqEvent {
   /// Creates a [SeqLogLevel.verbose] event.
   factory SeqEvent.verbose(String message, [SeqContext? context]) {
     return SeqEvent.now(
-        message, SeqLogLevel.verbose.value, null, null, context,);
+      message,
+      SeqLogLevel.verbose.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.debug] event.
@@ -111,13 +116,23 @@ class SeqEvent {
   /// Creates a [SeqLogLevel.information] event.
   factory SeqEvent.info(String message, [SeqContext? context]) {
     return SeqEvent.now(
-        message, SeqLogLevel.information.value, null, null, context,);
+      message,
+      SeqLogLevel.information.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.warning] event.
   factory SeqEvent.warning(String message, [SeqContext? context]) {
     return SeqEvent.now(
-        message, SeqLogLevel.warning.value, null, null, context,);
+      message,
+      SeqLogLevel.warning.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.error] event.

@@ -212,12 +212,18 @@ class SeqLogger {
       log(SeqLogLevel.warning, message, null, context);
 
   /// Records an error event for sending to Seq.
-  Future<void> error(String message,
-          [Object? exception, SeqContext? context,]) =>
+  Future<void> error(
+    String message, [
+    Object? exception,
+    SeqContext? context,
+  ]) =>
       log(SeqLogLevel.error, message, exception, context);
 
   /// Records a fatal event for sending to Seq.
-  Future<void> fatal(String message,
-          [Object? exception, SeqContext? context,]) =>
+  Future<void> fatal(
+    String message, [
+    Object? exception,
+    SeqContext? context,
+  ]) =>
       log(SeqLogLevel.fatal, message, exception, context);
 }
