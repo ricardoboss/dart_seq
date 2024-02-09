@@ -5,7 +5,8 @@ import 'package:test/test.dart';
 
 void main() {
   test('Seq Response decoding', () {
-    const json = '{"MinimumLevelAccepted": "Information", "Error": "test error"}';
+    const json =
+        '{"MinimumLevelAccepted": "Information", "Error": "test error"}';
     final map = jsonDecode(json) as Map<String, dynamic>;
 
     final response = SeqResponse.fromJson(map);

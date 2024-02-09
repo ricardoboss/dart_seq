@@ -2,8 +2,7 @@ import 'package:dart_seq/dart_seq.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('In memory cache', ()
-  {
+  group('In memory cache', () {
     test('Record', () async {
       // Arrange
       final cache = SeqInMemoryCache();
