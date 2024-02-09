@@ -1,3 +1,10 @@
+## 1.0.0-pre.1
+
+* First stable release candidate 🎉
+* `SeqClientException` now extends `Exception`
+* The static methods returning `SeqEvent` instances are now factories
+* Lots of documentation and some tests
+
 ## 0.1.2
 
 * Expose `backoff` property via `SeqLogger.http` factory
