@@ -49,6 +49,10 @@ Future<void> main() async {
 }
 ```
 
+which then can be viewed in your Seq instance:
+
+![Seq Screenshot showing the logged message with metadata](./doc/example_output.png)
+
 ## Additional information
 
 - Feature requests and bug reports should be reported using [GitHub issues](https://github.com/ricardoboss/dart_seq/issues).
