@@ -1,3 +1,7 @@
+## 1.0.0-pre.3
+
+* No changes; just a version bump to test the release workflow
+
 ## 1.0.0-pre.2
 
 * No changes; just a version bump to test the release workflow
