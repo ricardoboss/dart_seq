@@ -1,3 +1,11 @@
+## Unreleased
+
+* More documentation
+* Made methods in `SeqHttpClient` private:
+  * `collapseEvents`
+  * `sendRequest`
+  * `handleResponse`
+
 ## 1.0.0
 
 * First stable release 🎉

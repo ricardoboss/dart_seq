@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:dart_seq/dart_seq.dart';
 import 'package:http/http.dart' as http;
 
+/// Calculates a linearly increasing duration to based on the number of [tries].
 Duration linearBackoff(int tries) => Duration(milliseconds: tries * 100);
 
 /// A HTTP ingestion client for Seq. Implements the [SeqClient] interface.
@@ -36,7 +37,7 @@ class SeqHttpClient implements SeqClient {
 
   @override
   Future<void> sendEvents(List<SeqEvent> events) async {
-    final body = collapseEvents(events);
+    final body = _collapseEvents(events);
     if (body.isEmpty) {
       SeqLogger.diagnosticLog(SeqLogLevel.verbose, 'No events to send.');
 
@@ -45,18 +46,18 @@ class SeqHttpClient implements SeqClient {
 
     http.Response response;
     try {
-      response = await sendRequest(body);
+      response = await _sendRequest(body);
     } catch (e, stack) {
       throw SeqClientException('Failed to send request', e, stack);
     }
 
-    await handleResponse(response);
+    await _handleResponse(response);
   }
 
-  String collapseEvents(List<SeqEvent> events) =>
+  String _collapseEvents(List<SeqEvent> events) =>
       events.reversed.map(jsonEncode).join('\n');
 
-  Future<http.Response> sendRequest(String body) async {
+  Future<http.Response> _sendRequest(String body) async {
     http.Response? response;
     Exception? lastException;
 
@@ -94,7 +95,7 @@ class SeqHttpClient implements SeqClient {
     return response!;
   }
 
-  Future<void> handleResponse(http.Response response) async {
+  Future<void> _handleResponse(http.Response response) async {
     final json = jsonDecode(response.body);
     if (json is! Map<String, dynamic>) {
       throw SeqClientException('The response body was not a JSON object');

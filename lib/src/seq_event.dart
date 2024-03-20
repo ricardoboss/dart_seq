@@ -19,6 +19,12 @@ class SeqEvent {
     this.context,
   );
 
+  /// Creates an event from the given [map]. The map should be compatible with
+  /// the GELF logging format. The timestamp is parsed from the map, and the
+  /// message, message template, level, exception, and id are read from the map
+  /// as strings. The renderings are read as a map of strings, and the context
+  /// is read as a map of strings to dynamic.
+  /// If the map does not contain a timestamp, the current time is used.
   factory SeqEvent.fromMap(Map<String, dynamic> map) {
     DateTime? timestamp;
     String? message;
