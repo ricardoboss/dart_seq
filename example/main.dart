@@ -1,17 +1,15 @@
-import 'dart:io';
-
 import 'package:dart_seq/dart_seq.dart';
 
 Future<void> main() async {
   final logger = SeqLogger.http(
     host: 'http://localhost:5341',
     globalContext: {
-      'Environment': Platform.environment,
+      'App': 'Example',
     },
   );
 
-  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', null, {
-    'Dart': Platform.version,
+  await logger.log(SeqLogLevel.information, 'test, logged at: {Timestamp}', null, {
+    'Timestamp': DateTime.now().toUtc().toIso8601String(),
   });
 
   await logger.flush();
