@@ -1,3 +1,10 @@
+## 1.0.0
+
+* First stable release 🎉
+* `SeqClientException` now extends `Exception`
+* The static methods returning `SeqEvent` instances are now factories
+* Lots of documentation and some tests
+
 ## 1.0.0-pre.3
 
 * No changes; just a version bump to test the release workflow
