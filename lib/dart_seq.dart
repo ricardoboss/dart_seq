@@ -10,4 +10,3 @@ export 'src/seq_event.dart';
 export 'src/seq_in_memory_cache.dart';
 export 'src/seq_log_level.dart';
 export 'src/seq_logger.dart';
-export 'src/seq_response.dart';
