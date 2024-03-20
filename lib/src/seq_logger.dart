@@ -12,44 +12,6 @@ class SeqLogger {
     this.autoFlush = true,
   }) : assert(backlogLimit >= 0, 'backlogLimit must be >= 0');
 
-  /// Creates a new instance of [SeqLogger] that logs to a Seq server over HTTP.
-  ///
-  /// This method is a factory for creating a new instance of [SeqLogger] that
-  /// logs to a Seq server over HTTP using the [SeqHttpClient].
-  ///
-  /// By default, a new instance of [SeqInMemoryCache] is used for caching the
-  /// events. If you want to use a different cache, you can pass it as the
-  /// [cache] parameter.
-  factory SeqLogger.http({
-    required String host,
-    String? apiKey,
-    int maxRetries = 5,
-    SeqCache? cache,
-    int backlogLimit = 50,
-    SeqContext? globalContext,
-    String? minimumLogLevel,
-    bool autoFlush = true,
-    Duration Function(int tries)? httpBackoff,
-  }) {
-    final httpClient = SeqHttpClient(
-      host: host,
-      apiKey: apiKey,
-      maxRetries: maxRetries,
-      backoff: httpBackoff,
-    );
-
-    final actualCache = cache ?? SeqInMemoryCache();
-
-    return SeqLogger(
-      client: httpClient,
-      cache: actualCache,
-      backlogLimit: backlogLimit,
-      globalContext: globalContext,
-      minimumLogLevel: minimumLogLevel,
-      autoFlush: autoFlush,
-    );
-  }
-
   /// Compares two log levels.
   static int compareLevels(String? a, String? b) {
     if (a == null && b == null) {
