@@ -8,9 +8,14 @@ Future<void> main() async {
     },
   );
 
-  await logger.log(SeqLogLevel.information, 'test, logged at: {Timestamp}', null, {
-    'Timestamp': DateTime.now().toUtc().toIso8601String(),
-  });
+  await logger.log(
+    SeqLogLevel.information,
+    'test, logged at: {Timestamp}',
+    null,
+    {
+      'Timestamp': DateTime.now().toUtc().toIso8601String(),
+    },
+  );
 
   await logger.flush();
 }
