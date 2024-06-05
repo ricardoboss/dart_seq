@@ -14,4 +14,19 @@ class SeqClientException implements Exception {
 
   /// The stack trace of the exception that caused this exception, if any.
   final StackTrace? innerStackTrace;
+
+  @override
+  String toString() {
+    final buffer = StringBuffer()
+      ..write('SeqClientException: ')
+      ..write(message);
+
+    if (innerException != null) {
+      buffer
+        ..write('; innerException: ')
+        ..write(innerException);
+    }
+
+    return buffer.toString();
+  }
 }
