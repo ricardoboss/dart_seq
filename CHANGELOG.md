@@ -1,10 +1,7 @@
-## Unreleased
+## 2.0.0
 
 * More documentation
-* Made methods in `SeqHttpClient` private:
-  * `collapseEvents`
-  * `sendRequest`
-  * `handleResponse`
+* Moved `SeqHttpClient` to its own package @ https://pub.dev/packages/dart_seq_http_client
 
 ## 1.0.0
 
