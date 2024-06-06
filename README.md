@@ -12,39 +12,50 @@
 - **Cross-Platform Support**: With `dart_seq`, you can enjoy consistent logging capabilities across all Dart-supported platforms. It leverages the inherent cross-platform capabilities of Dart, making it easy to adopt and utilize in your applications, regardless of the target platform.
 - **Customizable Seq Client and Caching Implementations**: `dart_seq` provides an intuitive and flexible interface to customize your Seq client and caching implementations. This enables you to tailor the logging behavior to your specific requirements and preferences, adapting the library to various use cases and scenarios in your Dart applications.
 - **Batch Sending of Events**: `dart_seq` optimizes log transmission by sending events to Seq in batches. This helps minimize network overhead and improves overall logging performance, especially in high-traffic scenarios.
-- **Automatic Retry Mechanism**: The library automatically retries failed requests to the Seq server, except in the case of 429 (Too Many Requests) responses. This built-in resilience ensures that log entries are reliably delivered, even in the face of intermittent network connectivity or temporary server unavailability.
-- **Minimum Log Level Enforcement**: `dart_seq` keeps track of the server-side configured minimum log level and discards events that fall below this threshold. This feature helps reduce unnecessary log entries and ensures that only relevant and significant events are forwarded to the Seq server.
 
 With `dart_seq`, logging in your Dart applications becomes a breeze, ensuring that your logs are efficiently delivered to Seq servers across multiple platforms.
-The library's batch sending, automatic retry, and minimum log level enforcement features enhance the logging experience and provide robustness and flexibility to your logging infrastructure.
 
 ## Getting Started
 
-To start using `dart_seq` in your Dart application, follow these steps:
+To start using `dart_seq` in your Dart/Flutter application, follow these steps:
 
-1. Install the library using `dart pub add dart_seq`
-2. Import the package: `import 'package:dart_seq/dart_seq.dart';`
-3. Instantiate the `SeqLogger` class
-4. Start logging
+1. Install this library and the HTTP client: `dart pub add dart_seq dart_seq_http_client`
+2. Instantiate client, cache and logger (see usage below)
+3. Enjoy!
 
 ## Usage
 
+> **Note**
+> This library provides just the interfaces and scaffolding.
+> To actually log events, you need to use a client implementation like
+> [`dart_seq_http_client`](https://pub.dev/packages/dart_seq_http_client).
+
+After the installation, you can use the library like this:
+
 ```dart
+import 'package:dart_seq/dart_seq.dart';
+import 'package:dart_seq_http_client/dart_seq_http_client.dart';
+
 Future<void> main() async {
-  // configure your logger
-  final logger = SeqLogger.http(
+  // Use the HTTP client implementation to create a logger
+  final logger = SeqHttpLogger.create(
     host: 'http://localhost:5341',
     globalContext: {
-      'Environment': Platform.environment,
+      'App': 'Example',
     },
   );
 
-  // add log events
-  await logger.log(SeqLogLevel.information, 'test, dart: {Dart}', null, {
-    'Dart': Platform.version,
-  });
+  // Log a message
+  await logger.log(
+    SeqLogLevel.information,
+    'test, logged at: {Timestamp}',
+    null,
+    {
+      'Timestamp': DateTime.now().toUtc().toIso8601String(),
+    },
+  );
 
-  // don't forget to flush your logs at the end!
+  // Flush the logger to ensure all messages are sent
   await logger.flush();
 }
 ```
