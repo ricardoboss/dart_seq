@@ -33,3 +33,6 @@ build/
 /coverage/
 /ios/Flutter/
 /macos/Flutter/ephemeral/
+
+# Generated
+*.mocks.dart
