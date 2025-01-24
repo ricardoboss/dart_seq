@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dart_seq/dart_seq.dart';
 import 'package:synchronized/synchronized.dart';
 
@@ -104,13 +102,11 @@ class SeqLogger {
 
     await cache.record(contextualizedEvent);
 
-    unawaited(
-      _flushLock.synchronized(() async {
-        if (autoFlush && shouldFlush()) {
-          await flush();
-        }
-      }),
-    );
+    await _flushLock.synchronized(() async {
+      if (autoFlush && shouldFlush()) {
+        await flush();
+      }
+    });
   }
 
   /// Adds the global context to an event.
