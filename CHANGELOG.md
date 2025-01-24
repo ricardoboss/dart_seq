@@ -1,3 +1,7 @@
+## 2.0.1
+
+* Prevent multiple flushes while flushing
+
 ## 2.0.0
 
 * More documentation
