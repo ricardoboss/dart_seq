@@ -1,4 +1,5 @@
 import 'package:dart_seq/dart_seq.dart';
+import 'package:synchronized/synchronized.dart';
 
 /// The base class for logging events to Seq.
 class SeqLogger {
@@ -86,6 +87,9 @@ class SeqLogger {
   /// The minimum log level that should be logged.
   String? minimumLogLevel;
 
+  /// A lock used to prevent multiple flushes from happening at the same time.
+  late final Lock _flushLock = Lock();
+
   /// Sends an event to Seq.
   ///
   /// Checks [shouldLog] and [shouldFlush] before sending the event.
@@ -98,9 +102,11 @@ class SeqLogger {
 
     await cache.record(contextualizedEvent);
 
-    if (autoFlush && shouldFlush()) {
-      await flush();
-    }
+    await _flushLock.synchronized(() async {
+      if (autoFlush && shouldFlush()) {
+        await flush();
+      }
+    });
   }
 
   /// Adds the global context to an event.
