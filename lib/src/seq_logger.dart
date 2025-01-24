@@ -90,7 +90,7 @@ class SeqLogger {
   String? minimumLogLevel;
 
   /// A lock used to prevent multiple flushes from happening at the same time.
-  late final Lock _flushLock = Lock();
+  final Lock _flushLock = Lock();
 
   /// Sends an event to Seq.
   ///
