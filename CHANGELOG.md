@@ -1,6 +1,3 @@
-## 2.1.0
-* Added a lock used to prevent multiple flushes from happening at the same time
-
 ## 2.0.0
 
 * More documentation
