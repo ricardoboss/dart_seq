@@ -115,29 +115,38 @@ class SeqLogger {
   }
 
   /// Checks if the cache should be flushed based on the backlog limit.
-  bool shouldFlush() => cache.count >= backlogLimit;
+  bool shouldFlush() => !_flushing && cache.count >= backlogLimit;
+
+  /// Whether the logger is currently flushing events.
+  bool _flushing = false;
 
   /// Flushes at most [backlogLimit] events in the cache to Seq and updates the
   /// minimum log level based on the response from Seq.
   Future<void> flush() async {
-    diagnosticLog(SeqLogLevel.verbose, 'Flushing events');
+    try {
+      _flushing = true;
 
-    final eventsToBeSent = await cache.peek(backlogLimit).toList();
+      diagnosticLog(SeqLogLevel.verbose, 'Flushing events');
 
-    await client.sendEvents(eventsToBeSent);
+      final eventsToBeSent = await cache.peek(backlogLimit).toList();
 
-    await cache.remove(eventsToBeSent.length);
+      await client.sendEvents(eventsToBeSent);
 
-    final newLogLevel = client.minimumLevelAccepted;
-    if (minimumLogLevel != newLogLevel) {
-      diagnosticLog(
-        SeqLogLevel.verbose,
-        'Accepted new log level {MinimumLogLevel}',
-        null,
-        {'MinimumLogLevel': newLogLevel},
-      );
+      await cache.remove(eventsToBeSent.length);
 
-      minimumLogLevel = newLogLevel;
+      final newLogLevel = client.minimumLevelAccepted;
+      if (minimumLogLevel != newLogLevel) {
+        diagnosticLog(
+          SeqLogLevel.verbose,
+          'Accepted new log level {MinimumLogLevel}',
+          null,
+          {'MinimumLogLevel': newLogLevel},
+        );
+
+        minimumLogLevel = newLogLevel;
+      }
+    } finally {
+      _flushing = false;
     }
   }
 
