@@ -3,13 +3,30 @@ import 'dart:convert';
 import 'package:dart_seq/src/seq_context.dart';
 import 'package:dart_seq/src/seq_log_level.dart';
 
+/// Known Seq CLEF keys that should not be double-escaped in context.
+const _knownSeqKeys = {
+  '@t',
+  '@m',
+  '@mt',
+  '@l',
+  '@x',
+  '@i',
+  '@r',
+  '@tr',
+  '@sp',
+  '@ps',
+  '@st',
+  '@sc',
+  '@ra',
+  '@sk',
+};
+
 /// This class represents a single Seq event. It includes metadata like the
 /// timestamp and also the actual message and context.
 class SeqEvent {
-  /// Creates an event with the given [timestamp], [message]/[messageTemplate],
-  /// [level], [exception], [id], [renderings], and [context].
-  SeqEvent(
-    this.timestamp,
+  /// Creates an event with the given fields.
+  SeqEvent({
+    required this.timestamp,
     this.message,
     this.messageTemplate,
     this.level,
@@ -17,10 +34,17 @@ class SeqEvent {
     this.id,
     this.renderings,
     this.context,
-  );
+    this.traceId,
+    this.spanId,
+    this.parentSpanId,
+    this.spanStart,
+    this.scope,
+    this.resourceAttributes,
+    this.spanKind,
+  });
 
   /// Creates an event from the given [map]. The map should be compatible with
-  /// the GELF logging format. The timestamp is parsed from the map, and the
+  /// the CLEF logging format. The timestamp is parsed from the map, and the
   /// message, message template, level, exception, and id are read from the map
   /// as strings. The renderings are read as a map of strings, and the context
   /// is read as a map of strings to dynamic.
@@ -34,6 +58,13 @@ class SeqEvent {
     int? id;
     Map<String, dynamic>? renderings;
     SeqContext? context;
+    String? traceId;
+    String? spanId;
+    String? parentSpanId;
+    DateTime? spanStart;
+    String? scope;
+    Map<String, dynamic>? resourceAttributes;
+    String? spanKind;
 
     void addToContext(MapEntry<String, dynamic> entry) {
       context ??= <String, dynamic>{};
@@ -55,11 +86,27 @@ class SeqEvent {
           level = value;
         } else if (e.key == '@i') {
           id = int.parse(value);
+        } else if (e.key == '@x') {
+          exception = e.value;
+        } else if (e.key == '@tr') {
+          traceId = value;
+        } else if (e.key == '@sp') {
+          spanId = value;
+        } else if (e.key == '@ps') {
+          parentSpanId = value;
+        } else if (e.key == '@st') {
+          spanStart = DateTime.parse(value);
+        } else if (e.key == '@sc') {
+          scope = value;
+        } else if (e.key == '@sk') {
+          spanKind = value;
         } else {
           addToContext(e);
         }
       } else if (e.value is Map && e.key == '@r') {
         renderings = e.value as Map<String, dynamic>;
+      } else if (e.value is Map && e.key == '@ra') {
+        resourceAttributes = e.value as Map<String, dynamic>;
       } else {
         if (e.key == '@x') {
           exception = e.value;
@@ -72,14 +119,21 @@ class SeqEvent {
     timestamp ??= DateTime.now();
 
     return SeqEvent(
-      timestamp,
-      message,
-      messageTemplate,
-      level,
-      exception,
-      id,
-      renderings,
-      context,
+      timestamp: timestamp,
+      message: message,
+      messageTemplate: messageTemplate,
+      level: level,
+      exception: exception,
+      id: id,
+      renderings: renderings,
+      context: context,
+      traceId: traceId,
+      spanId: spanId,
+      parentSpanId: parentSpanId,
+      spanStart: spanStart,
+      scope: scope,
+      resourceAttributes: resourceAttributes,
+      spanKind: spanKind,
     );
   }
 
@@ -93,6 +147,13 @@ class SeqEvent {
     int? id,
     Object? exception,
     SeqContext? context,
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
   ]) {
     final time = DateTime.now();
     final renderings =
@@ -100,7 +161,23 @@ class SeqEvent {
     final m = renderings == null ? message : null;
     final mt = renderings == null ? null : message;
 
-    return SeqEvent(time, m, mt, level, exception, id, renderings, context);
+    return SeqEvent(
+      timestamp: time,
+      message: m,
+      messageTemplate: mt,
+      level: level,
+      exception: exception,
+      id: id,
+      renderings: renderings,
+      context: context,
+      traceId: traceId,
+      spanId: spanId,
+      parentSpanId: parentSpanId,
+      spanStart: spanStart,
+      scope: scope,
+      resourceAttributes: resourceAttributes,
+      spanKind: spanKind,
+    );
   }
 
   /// Creates a [SeqLogLevel.verbose] event.
@@ -187,6 +264,27 @@ class SeqEvent {
   /// Any context relevant for this event.
   final SeqContext? context;
 
+  /// The trace ID for distributed tracing (@tr).
+  final String? traceId;
+
+  /// The span ID for distributed tracing (@sp).
+  final String? spanId;
+
+  /// The parent span ID for distributed tracing (@ps).
+  final String? parentSpanId;
+
+  /// The span start timestamp (@st).
+  final DateTime? spanStart;
+
+  /// The instrumentation scope (@sc).
+  final String? scope;
+
+  /// Resource attributes for OpenTelemetry integration (@ra).
+  final Map<String, dynamic>? resourceAttributes;
+
+  /// The span kind (@sk).
+  final String? spanKind;
+
   /// Returns a copy of this event with the given [context] merged into the
   /// existing context, if any.
   SeqEvent withAddedContext(SeqContext? context) {
@@ -200,21 +298,28 @@ class SeqEvent {
     };
 
     return SeqEvent(
-      timestamp,
-      message,
-      messageTemplate,
-      level,
-      exception,
-      id,
-      renderings,
-      newContext,
+      timestamp: timestamp,
+      message: message,
+      messageTemplate: messageTemplate,
+      level: level,
+      exception: exception,
+      id: id,
+      renderings: renderings,
+      context: newContext,
+      traceId: traceId,
+      spanId: spanId,
+      parentSpanId: parentSpanId,
+      spanStart: spanStart,
+      scope: scope,
+      resourceAttributes: resourceAttributes,
+      spanKind: spanKind,
     );
   }
 
   /// Used by [jsonEncode], alias for [toMap].
   Map<String, dynamic> toJson() => toMap();
 
-  /// Returns this event as a map compatible with the GELF logging format.
+  /// Returns this event as a map compatible with the CLEF logging format.
   Map<String, dynamic> toMap() {
     final data = <String, dynamic>{
       '@t': timestamp.toUtc().toIso8601String(),
@@ -233,7 +338,7 @@ class SeqEvent {
     }
 
     if (exception != null) {
-      data['@x'] = Error.safeToString(exception);
+      data['@x'] = exception.toString();
     }
 
     if (id != null) {
@@ -244,10 +349,32 @@ class SeqEvent {
       data['@r'] = renderings;
     }
 
+    if (traceId != null) {
+      data['@tr'] = traceId;
+    }
+    if (spanId != null) {
+      data['@sp'] = spanId;
+    }
+    if (parentSpanId != null) {
+      data['@ps'] = parentSpanId;
+    }
+    if (spanStart != null) {
+      data['@st'] = spanStart!.toUtc().toIso8601String();
+    }
+    if (scope != null) {
+      data['@sc'] = scope;
+    }
+    if (resourceAttributes?.isNotEmpty ?? false) {
+      data['@ra'] = resourceAttributes;
+    }
+    if (spanKind != null) {
+      data['@sk'] = spanKind;
+    }
+
     if (context != null) {
       for (final e in context!.entries) {
         var key = e.key;
-        if (key[0] == '@') {
+        if (key[0] == '@' && !_knownSeqKeys.contains(key)) {
           key = '@$key';
         }
 
