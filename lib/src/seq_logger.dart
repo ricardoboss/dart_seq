@@ -1,4 +1,37 @@
+import 'dart:async';
+
 import 'package:dart_seq/dart_seq.dart';
+
+/// Callback invoked when [SeqLogger.flush] encounters send failures.
+///
+/// Receives per-event [results] indicating which events succeeded or failed,
+/// and the [error] (the original exception for total failures, or a
+/// descriptive [SeqClientException] for partial failures).
+///
+/// Return the events that should be re-queued in cache for retry.
+/// Return an empty list to drop all failed events.
+///
+/// ## Default behavior (when not set)
+///
+/// - **Partial failure** (results returned): events with
+///   [SeqEventSentResult.isPermanent] `true` are dropped (e.g. HTTP 400 —
+///   the event is malformed and retrying would produce the same rejection).
+///   Transient failures (`isPermanent: false`) are re-queued automatically.
+/// - **Total failure** (exception thrown): all events stay in cache (they
+///   were never sent).
+///
+/// ## When to provide a custom handler
+///
+/// Provide a custom handler when you need to:
+/// - Log or report individual event failures
+/// - Apply a retry limit (e.g. drop events that have failed N times)
+/// - Distinguish between error types beyond permanent/transient
+///
+/// See [SeqLogger.onFlushError] for a recommended implementation example.
+typedef FlushErrorHandler = Future<List<SeqEvent>> Function(
+  List<SeqEventSentResult> results,
+  Object error,
+);
 
 /// The base class for logging events to Seq.
 class SeqLogger {
@@ -10,6 +43,9 @@ class SeqLogger {
     this.globalContext,
     this.minimumLogLevel,
     this.autoFlush = true,
+    this.onFlushError,
+    this.throwOnError = false,
+    this.flushInterval,
   }) : assert(backlogLimit >= 0, 'backlogLimit must be >= 0');
 
   /// Compares two log levels.
@@ -83,6 +119,58 @@ class SeqLogger {
   /// backlog limit is reached.
   final bool autoFlush;
 
+  /// Optional callback invoked when [flush] encounters send failures.
+  ///
+  /// Called with per-event [SeqEventSentResult]s and the [error]. Each result
+  /// carries [SeqEventSentResult.isSuccess], [SeqEventSentResult.error], and
+  /// [SeqEventSentResult.isPermanent] so you can make fine-grained decisions.
+  ///
+  /// Return the events that should be re-queued in cache for a future flush
+  /// attempt. Return an empty list to drop all.
+  ///
+  /// ## Default behavior (when not set)
+  ///
+  /// The built-in logic already handles the common cases correctly:
+  ///
+  /// - **Partial failure** (per-event results): permanent failures
+  ///   (`isPermanent: true`, e.g. HTTP 400) are dropped. Transient failures
+  ///   are re-queued for retry.
+  /// - **Total failure** (exception): all events stay in cache.
+  ///
+  /// ## Recommended implementation
+  ///
+  /// Only provide this callback if you need custom behavior beyond the
+  /// defaults — for example, logging failures or applying a retry limit.
+  ///
+  /// ```dart
+  /// onFlushError: (results, error) async {
+  ///   final toRetry = <SeqEvent>[];
+  ///
+  ///   for (final r in results.where((r) => !r.isSuccess)) {
+  ///     if (r.isPermanent) {
+  ///       // Event is malformed — retrying would fail again.
+  ///       log('Dropping permanently rejected event: ${r.error}');
+  ///       continue;
+  ///     }
+  ///     // Transient failure (network, server overload) — retry.
+  ///     toRetry.add(r.event);
+  ///   }
+  ///
+  ///   return toRetry;
+  /// }
+  /// ```
+  final FlushErrorHandler? onFlushError;
+
+  /// When `false` (default), exceptions during [flush] are caught and
+  /// reported via [onDiagnosticLog]. When `true`, they propagate to caller.
+  final bool throwOnError;
+
+  /// Optional duration for periodic auto-flushing.
+  ///
+  /// When set, a timer is started (or reset) after each [send] call.
+  /// When the timer fires, [flush] is called if there are cached events.
+  final Duration? flushInterval;
+
   /// The minimum log level that should be logged.
   String? minimumLogLevel;
 
@@ -99,8 +187,18 @@ class SeqLogger {
     await cache.record(contextualizedEvent);
 
     if (autoFlush && shouldFlush()) {
-      await flush();
+      if (throwOnError) {
+        await flush();
+      } else {
+        try {
+          await flush();
+        } on Exception catch (e) {
+          diagnosticLog(SeqLogLevel.error, 'Auto-flush failed', e);
+        }
+      }
     }
+
+    _resetFlushTimer();
   }
 
   /// Adds the global context to an event.
@@ -110,8 +208,7 @@ class SeqLogger {
 
   /// Checks if an event should be logged based on the minimum log level.
   bool shouldLog(SeqEvent event) {
-    return minimumLogLevel == null ||
-        compareLevels(minimumLogLevel, event.level) <= 0;
+    return minimumLogLevel == null || compareLevels(minimumLogLevel, event.level) <= 0;
   }
 
   /// Checks if the cache should be flushed based on the backlog limit.
@@ -120,9 +217,34 @@ class SeqLogger {
   /// Whether the logger is currently flushing events.
   bool _flushing = false;
 
+  Timer? _flushTimer;
+
+  void _resetFlushTimer() {
+    _flushTimer?.cancel();
+    if (flushInterval != null) {
+      _flushTimer = Timer(flushInterval!, _onFlushTimer);
+    }
+  }
+
+  void _onFlushTimer() {
+    if (cache.count > 0) {
+      unawaited(flush());
+    }
+  }
+
+  /// Cancels the flush timer. Call when the logger is no longer needed.
+  void dispose() {
+    _flushTimer?.cancel();
+    _flushTimer = null;
+  }
+
   /// Flushes at most [backlogLimit] events in the cache to Seq and updates the
   /// minimum log level based on the response from Seq.
   Future<void> flush() async {
+    if (_flushing) {
+      return;
+    }
+
     try {
       _flushing = true;
 
@@ -130,34 +252,126 @@ class SeqLogger {
 
       final eventsToBeSent = await cache.peek(backlogLimit).toList();
 
-      await client.sendEvents(eventsToBeSent);
+      try {
+        final results = await client.sendEvents(eventsToBeSent);
 
-      await cache.remove(eventsToBeSent.length);
+        // Path A: sendEvents returned results (batch succeeded or partial)
+        await cache.remove(eventsToBeSent.length);
 
-      final newLogLevel = client.minimumLevelAccepted;
-      if (minimumLogLevel != newLogLevel) {
+        final failed = results.where((r) => !r.isSuccess).toList();
+        final allSucceeded = failed.isEmpty;
+
+        if (!allSucceeded) {
+          final error = SeqClientException(
+            '${failed.length} of ${results.length} events failed',
+          );
+
+          if (onFlushError != null) {
+            final eventsToKeep = await onFlushError!(results, error);
+            for (final event in eventsToKeep) {
+              await cache.record(event);
+            }
+          } else {
+            // Default: re-queue transient failures, drop permanent ones.
+            for (final r in failed.where((r) => !r.isPermanent)) {
+              await cache.record(r.event);
+            }
+          }
+        }
+
+        _updateMinimumLogLevel();
+      } on Exception catch (e) {
+        // Path B: sendEvents threw (total failure — network/auth)
+        // Events stay in cache by default (they were never sent).
         diagnosticLog(
-          SeqLogLevel.verbose,
-          'Accepted new log level {MinimumLogLevel}',
-          null,
-          {'MinimumLogLevel': newLogLevel},
+          SeqLogLevel.error,
+          'Failed to send {EventCount} events',
+          e,
+          {'EventCount': eventsToBeSent.length},
         );
 
-        minimumLogLevel = newLogLevel;
+        if (onFlushError != null) {
+          final syntheticResults = eventsToBeSent.map((event) => SeqEventSentResult.failure(event, e)).toList();
+          await cache.remove(eventsToBeSent.length);
+          final eventsToKeep = await onFlushError!(syntheticResults, e);
+          for (final event in eventsToKeep) {
+            await cache.record(event);
+          }
+        }
+
+        if (throwOnError) {
+          rethrow;
+        }
       }
+    } on Exception catch (e) {
+      if (throwOnError) {
+        rethrow;
+      }
+      diagnosticLog(SeqLogLevel.error, 'Flush failed unexpectedly', e);
     } finally {
       _flushing = false;
     }
   }
 
+  void _updateMinimumLogLevel() {
+    final newLogLevel = client.minimumLevelAccepted;
+    if (minimumLogLevel != newLogLevel) {
+      diagnosticLog(
+        SeqLogLevel.verbose,
+        'Accepted new log level {MinimumLogLevel}',
+        null,
+        {'MinimumLogLevel': newLogLevel},
+      );
+
+      minimumLogLevel = newLogLevel;
+    }
+  }
+
   /// Records an event for sending to Seq.
+  ///
+  /// The [level] and [message] are required. All other parameters are optional.
+  ///
+  /// The [exception] is serialized into the CLEF `@x` field.
+  ///
+  /// The [context] is a map of additional properties attached to the event.
+  ///
+  /// The distributed tracing parameters follow the OpenTelemetry specification
+  /// and are mapped to Seq's CLEF extensions:
+  ///
+  /// - [traceId] (`@tr`) — the distributed trace identifier, a 32-character
+  ///   lowercase hex string. See [W3C Trace Context](https://www.w3.org/TR/trace-context/#trace-id).
+  /// - [spanId] (`@sp`) — the span identifier, a 16-character lowercase hex
+  ///   string uniquely identifying this unit of work within a trace.
+  ///   See [W3C Trace Context](https://www.w3.org/TR/trace-context/#parent-id).
+  /// - [parentSpanId] (`@ps`) — the span ID of the caller/parent span.
+  /// - [spanStart] (`@st`) — the timestamp when the span started. Used with
+  ///   the event timestamp to compute span duration.
+  /// - [scope] (`@sc`) — the instrumentation scope (e.g. library or module
+  ///   name) that produced the event.
+  /// - [resourceAttributes] (`@ra`) — a map of resource attributes describing
+  ///   the entity producing telemetry (e.g. service name, version, host).
+  ///   See [OpenTelemetry Resource SDK](https://opentelemetry.io/docs/specs/otel/resource/sdk/).
+  /// - [spanKind] (`@sk`) — the kind of span: `client`, `server`, `producer`,
+  ///   `consumer`, or `internal`.
+  ///   See [OpenTelemetry SpanKind](https://opentelemetry.io/docs/specs/otel/trace/api/#spankind).
+  ///
+  /// For more details on Seq's CLEF format, see
+  /// [Seq CLEF documentation](https://docs.datalust.co/docs/the-compact-log-event-format).
   Future<void> log(
     SeqLogLevel level,
-    String message, [
+    String message, {
     Object? exception,
     SeqContext? context,
-  ]) async {
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) async {
     var actualContext = context;
+
     if (context != null && context.isEmpty) {
       actualContext = null;
     }
@@ -168,40 +382,189 @@ class SeqLogger {
       null,
       exception,
       actualContext,
+      traceId,
+      spanId,
+      parentSpanId,
+      spanStart,
+      scope,
+      resourceAttributes,
+      spanKind,
     );
 
     await send(event);
   }
 
   /// Records a verbose event for sending to Seq.
-  Future<void> verbose(String message, [SeqContext? context]) =>
-      log(SeqLogLevel.verbose, message, null, context);
+  ///
+  /// See [log] for parameter documentation.
+  Future<void> verbose(
+    String message, {
+    Object? exception,
+    SeqContext? context,
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.verbose,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 
   /// Records a debug event for sending to Seq.
-  Future<void> debug(String message, [SeqContext? context]) =>
-      log(SeqLogLevel.debug, message, null, context);
+  ///
+  /// See [log] for parameter documentation.
+  Future<void> debug(
+    String message, {
+    Object? exception,
+    SeqContext? context,
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.debug,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 
   /// Records an information event for sending to Seq.
-  Future<void> info(String message, [SeqContext? context]) =>
-      log(SeqLogLevel.information, message, null, context);
+  ///
+  /// See [log] for parameter documentation.
+  Future<void> info(
+    String message, {
+    Object? exception,
+    SeqContext? context,
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.information,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 
   /// Records a warning event for sending to Seq.
-  Future<void> warning(String message, [SeqContext? context]) =>
-      log(SeqLogLevel.warning, message, null, context);
+  ///
+  /// See [log] for parameter documentation.
+  Future<void> warning(
+    String message, {
+    Object? exception,
+    SeqContext? context,
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.warning,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 
   /// Records an error event for sending to Seq.
+  ///
+  /// See [log] for parameter documentation.
   Future<void> error(
-    String message, [
+    String message, {
     Object? exception,
     SeqContext? context,
-  ]) =>
-      log(SeqLogLevel.error, message, exception, context);
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.error,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 
   /// Records a fatal event for sending to Seq.
+  ///
+  /// See [log] for parameter documentation.
   Future<void> fatal(
-    String message, [
+    String message, {
     Object? exception,
     SeqContext? context,
-  ]) =>
-      log(SeqLogLevel.fatal, message, exception, context);
+    String? traceId,
+    String? spanId,
+    String? parentSpanId,
+    DateTime? spanStart,
+    String? scope,
+    Map<String, dynamic>? resourceAttributes,
+    String? spanKind,
+  }) =>
+      log(
+        SeqLogLevel.fatal,
+        message,
+        exception: exception,
+        context: context,
+        traceId: traceId,
+        spanId: spanId,
+        parentSpanId: parentSpanId,
+        spanStart: spanStart,
+        scope: scope,
+        resourceAttributes: resourceAttributes,
+        spanKind: spanKind,
+      );
 }
