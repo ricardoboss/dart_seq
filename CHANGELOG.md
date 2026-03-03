@@ -1,3 +1,21 @@
+## 3.0.0
+
+### Breaking Changes
+
+* `SeqLogger.log()` — `exception` and `context` changed from positional to **named** parameters
+* `SeqLogger` convenience methods (`verbose`, `debug`, `info`, `warning`, `error`, `fatal`) — `exception` and `context` changed from positional to **named** parameters
+* `SeqEvent` constructor — all parameters except `timestamp` are now **named**
+* `SeqEventSentResult` constructor — all parameters are now **named**
+
+### New Features
+
+* **`throwOnError` flag** (#14) — when `false` (default), flush errors are caught and reported via `onDiagnosticLog`; when `true`, they propagate to caller
+* **`flushInterval` timer** (#15) — optional `Duration` that triggers automatic flush after inactivity
+* **`dispose()` method** — cancels the flush timer; call when the logger is no longer needed
+* **`onFlushError` callback** — handler invoked when flush fails; receives failed events and error, returns events to re-queue
+* **OpenTelemetry / distributed tracing fields** (#10) — 7 new CLEF fields on `SeqEvent`: `traceId` (`@tr`), `spanId` (`@sp`), `parentSpanId` (`@ps`), `spanStart` (`@st`), `scope` (`@sc`), `resourceAttributes` (`@ra`), `spanKind` (`@sk`)
+* Known Seq CLEF keys (`@tr`, `@sp`, etc.) are no longer double-escaped in context
+
 ## 2.0.1
 
 * Prevent multiple flushes while flushing
