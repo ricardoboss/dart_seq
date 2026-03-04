@@ -156,8 +156,7 @@ class SeqEvent {
     String? spanKind,
   ]) {
     final time = DateTime.now();
-    final renderings =
-        context?.map((key, value) => MapEntry(key, _renderValue(value)));
+    final renderings = context?.map((key, value) => MapEntry(key, _renderValue(value)));
     final m = renderings == null ? message : null;
     final mt = renderings == null ? null : message;
 
@@ -337,8 +336,8 @@ class SeqEvent {
       data['@l'] = level;
     }
 
-    if (exception != null) {
-      data['@x'] = exception.toString();
+    if (exception case final ex?) {
+      data['@x'] = _safeToString(ex);
     }
 
     if (id != null) {
@@ -383,5 +382,15 @@ class SeqEvent {
     }
 
     return data;
+  }
+
+  /// Tries [object.toString()] first for readable output.
+  /// Falls back to [Error.safeToString] if toString() throws.
+  static String _safeToString(Object object) {
+    try {
+      return object.toString();
+    } on Object {
+      return Error.safeToString(object);
+    }
   }
 }
