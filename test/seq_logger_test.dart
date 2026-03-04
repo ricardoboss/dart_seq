@@ -449,8 +449,7 @@ void main() {
         );
       });
 
-      test(
-          'calls onFlushError with synthetic failure results on total failure',
+      test('calls onFlushError with synthetic failure results on total failure',
           () async {
         final sendError = Exception('bad request');
         client.throwOnSend = sendError;
@@ -505,7 +504,8 @@ void main() {
         expect(cache.count, 2, reason: 'Events re-recorded by onFlushError');
       });
 
-      test('removes events from cache on total failure with onFlushError '
+      test(
+          'removes events from cache on total failure with onFlushError '
           'returning empty list', () async {
         client.throwOnSend = Exception('permanent error');
 
@@ -626,8 +626,7 @@ void main() {
         expect(warnings.first.context!['Message'], 'bad-trace-id');
       });
 
-      test(
-          'partial failure without onFlushError re-queues transient failures',
+      test('partial failure without onFlushError re-queues transient failures',
           () async {
         final event1 = SeqEvent.info('good');
         final event2 = SeqEvent.info('transient-fail');
@@ -679,8 +678,7 @@ void main() {
         expect(diagnosticEvent!.context!['EventCount'], 1);
       });
 
-      test(
-          'non-retryable exception halves batch size for next flush',
+      test('non-retryable exception halves batch size for next flush',
           () async {
         client.throwOnSend = _NonRetryableException('payload too large');
 
@@ -765,7 +763,6 @@ void main() {
       test(
           'non-retryable batch resets batch size after successful smaller flush',
           () async {
-        var callCount = 0;
         client.throwOnSend = _NonRetryableException('payload too large');
 
         final logger = SeqLogger(

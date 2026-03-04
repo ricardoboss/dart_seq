@@ -255,8 +255,7 @@ class SeqLogger {
 
       diagnosticLog(SeqLogLevel.verbose, 'Flushing events');
 
-      final eventsToBeSent =
-          await cache.peek(_nextFlushBatchSize).toList();
+      final eventsToBeSent = await cache.peek(_nextFlushBatchSize).toList();
 
       try {
         final results = await client.sendEvents(eventsToBeSent);
@@ -336,7 +335,7 @@ class SeqLogger {
             diagnosticLog(
               SeqLogLevel.warning,
               'Reducing batch size from {OldSize} to {NewSize} '
-                  'after non-retryable error',
+              'after non-retryable error',
               e,
               {
                 'OldSize': eventsToBeSent.length,
