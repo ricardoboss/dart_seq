@@ -98,6 +98,13 @@ class _ThrowingPeekCache implements SeqCache {
   }
 }
 
+class _NonRetryableException extends SeqClientException {
+  _NonRetryableException(super.message);
+
+  @override
+  bool get isRetryable => false;
+}
+
 void main() {
   group('SeqLogger', () {
     late _MockSeqClient client;
@@ -585,6 +592,41 @@ void main() {
       });
 
       test(
+          'partial failure without onFlushError logs diagnostic for permanent '
+          'failures', () async {
+        final event1 = SeqEvent.info('good');
+        final event2 = SeqEvent.info('bad-trace-id');
+
+        client.resultsToReturn = [
+          SeqEventSentResult.success(event1),
+          SeqEventSentResult.failure(
+            event2,
+            Exception('invalid @tr'),
+            isPermanent: true,
+          ),
+        ];
+
+        final diagnosticEvents = <SeqEvent>[];
+        SeqLogger.onDiagnosticLog = diagnosticEvents.add;
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await cache.record(event1);
+        await cache.record(event2);
+        await logger.flush();
+
+        final warnings =
+            diagnosticEvents.where((e) => e.level == 'warning').toList();
+        expect(warnings, hasLength(1));
+        expect(warnings.first.context!['Message'], 'bad-trace-id');
+      });
+
+      test(
           'partial failure without onFlushError re-queues transient failures',
           () async {
         final event1 = SeqEvent.info('good');
@@ -635,6 +677,167 @@ void main() {
 
         expect(diagnosticEvent, isNotNull);
         expect(diagnosticEvent!.context!['EventCount'], 1);
+      });
+
+      test(
+          'non-retryable exception halves batch size for next flush',
+          () async {
+        client.throwOnSend = _NonRetryableException('payload too large');
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('one'));
+        await logger.send(SeqEvent.info('two'));
+        await logger.send(SeqEvent.info('three'));
+        await logger.send(SeqEvent.info('four'));
+
+        expect(cache.count, 4);
+
+        // First flush: tries all 4, fails, halves to 2
+        await logger.flush();
+
+        expect(
+          cache.count,
+          4,
+          reason: 'Events stay in cache, only batch size reduced',
+        );
+
+        // Second flush: tries first 2, fails, halves to 1
+        await logger.flush();
+        expect(cache.count, 4);
+
+        // Third flush: tries 1 event, fails, drops it
+        await logger.flush();
+        expect(cache.count, 3, reason: 'Single non-retryable event dropped');
+      });
+
+      test('non-retryable exception drops single event when no onFlushError',
+          () async {
+        client.throwOnSend = _NonRetryableException('payload too large');
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('huge-event'));
+
+        expect(cache.count, 1);
+
+        await logger.flush();
+
+        expect(
+          cache.count,
+          0,
+          reason: 'Single non-retryable event is dropped',
+        );
+      });
+
+      test('non-retryable single event logs diagnostic warning', () async {
+        client.throwOnSend = _NonRetryableException('payload too large');
+
+        final diagnosticEvents = <SeqEvent>[];
+        SeqLogger.onDiagnosticLog = diagnosticEvents.add;
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('huge-event'));
+        await logger.flush();
+
+        final warnings =
+            diagnosticEvents.where((e) => e.level == 'warning').toList();
+        expect(warnings, hasLength(1));
+        expect(warnings.first.context!['Message'], 'huge-event');
+      });
+
+      test(
+          'non-retryable batch resets batch size after successful smaller flush',
+          () async {
+        var callCount = 0;
+        client.throwOnSend = _NonRetryableException('payload too large');
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 4,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('one'));
+        await logger.send(SeqEvent.info('two'));
+        await logger.send(SeqEvent.info('three'));
+        await logger.send(SeqEvent.info('four'));
+
+        // First flush: tries 4, fails → halves to 2
+        await logger.flush();
+        expect(cache.count, 4);
+
+        // Now make sends succeed
+        client.throwOnSend = null;
+
+        // Second flush: tries 2 (halved batch), succeeds → resets to 4
+        await logger.flush();
+        expect(cache.count, 2, reason: 'First 2 events sent successfully');
+
+        // Third flush: tries remaining 2 with reset batch size, succeeds
+        await logger.flush();
+        expect(cache.count, 0, reason: 'All events sent');
+      });
+
+      test('retryable exception keeps events in cache (existing behavior)',
+          () async {
+        client.throwOnSend = SeqClientException('network error');
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('one'));
+        await logger.send(SeqEvent.info('two'));
+
+        await logger.flush();
+
+        expect(
+          cache.count,
+          2,
+          reason: 'Retryable errors keep events in cache',
+        );
+      });
+
+      test('plain Exception keeps events in cache (not SeqClientException)',
+          () async {
+        client.throwOnSend = Exception('unknown error');
+
+        final logger = SeqLogger(
+          client: client,
+          cache: cache,
+          backlogLimit: 10,
+          autoFlush: false,
+        );
+
+        await logger.send(SeqEvent.info('one'));
+        await logger.flush();
+
+        expect(
+          cache.count,
+          1,
+          reason: 'Non-SeqClientException keeps events in cache',
+        );
       });
 
       test('shouldFlush returns false while flushing (concurrent guard)',

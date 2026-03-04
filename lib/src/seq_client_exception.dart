@@ -15,6 +15,13 @@ class SeqClientException implements Exception {
   /// The stack trace of the exception that caused this exception, if any.
   final StackTrace? innerStackTrace;
 
+  /// Whether the error is retryable.
+  ///
+  /// When `true` (default), the caller should keep events in cache and retry
+  /// on the next flush. When `false`, retrying the same batch will produce the
+  /// same error (e.g. payload too large, malformed request).
+  bool get isRetryable => true;
+
   @override
   String toString() {
     final buffer = StringBuffer()

@@ -217,6 +217,11 @@ class SeqLogger {
   /// Whether the logger is currently flushing events.
   bool _flushing = false;
 
+  /// Batch size for the next flush. Starts at [backlogLimit] and halves on
+  /// non-retryable errors to probe for a working batch size. Resets to
+  /// [backlogLimit] after a successful send.
+  late int _nextFlushBatchSize = backlogLimit;
+
   Timer? _flushTimer;
 
   void _resetFlushTimer() {
@@ -250,13 +255,15 @@ class SeqLogger {
 
       diagnosticLog(SeqLogLevel.verbose, 'Flushing events');
 
-      final eventsToBeSent = await cache.peek(backlogLimit).toList();
+      final eventsToBeSent =
+          await cache.peek(_nextFlushBatchSize).toList();
 
       try {
         final results = await client.sendEvents(eventsToBeSent);
 
         // Path A: sendEvents returned results (batch succeeded or partial)
         await cache.remove(eventsToBeSent.length);
+        _nextFlushBatchSize = backlogLimit;
 
         final failed = results.where((r) => !r.isSuccess).toList();
         final allSucceeded = failed.isEmpty;
@@ -273,7 +280,19 @@ class SeqLogger {
             }
           } else {
             // Default: re-queue transient failures, drop permanent ones.
-            for (final r in failed.where((r) => !r.isPermanent)) {
+            final permanent = failed.where((r) => r.isPermanent).toList();
+            final transient = failed.where((r) => !r.isPermanent).toList();
+
+            for (final r in permanent) {
+              diagnosticLog(
+                SeqLogLevel.warning,
+                'Dropping permanently rejected event: {Message}',
+                r.error is Exception ? r.error! as Exception : null,
+                {'Message': r.event.message},
+              );
+            }
+
+            for (final r in transient) {
               await cache.record(r.event);
             }
           }
@@ -281,7 +300,7 @@ class SeqLogger {
 
         _updateMinimumLogLevel();
       } on Exception catch (e) {
-        // Path B: sendEvents threw (total failure — network/auth)
+        // Path B: sendEvents threw (total failure — network/auth/413)
         // Events stay in cache by default (they were never sent).
         diagnosticLog(
           SeqLogLevel.error,
@@ -296,6 +315,34 @@ class SeqLogger {
           final eventsToKeep = await onFlushError!(syntheticResults, e);
           for (final event in eventsToKeep) {
             await cache.record(event);
+          }
+        } else if (e is SeqClientException && !e.isRetryable) {
+          // Non-retryable error (e.g. 413 Payload Too Large, 400 Bad
+          // Request). Retrying the same batch will produce the same error.
+          if (eventsToBeSent.length == 1) {
+            // Single event is too large — drop it.
+            await cache.remove(1);
+            diagnosticLog(
+              SeqLogLevel.warning,
+              'Dropping non-retryable event: {Message}',
+              e,
+              {'Message': eventsToBeSent.first.message},
+            );
+            _nextFlushBatchSize = backlogLimit;
+          } else {
+            // Halve the batch size for the next flush attempt. Events stay
+            // in cache — only the peek window shrinks.
+            _nextFlushBatchSize = eventsToBeSent.length ~/ 2;
+            diagnosticLog(
+              SeqLogLevel.warning,
+              'Reducing batch size from {OldSize} to {NewSize} '
+                  'after non-retryable error',
+              e,
+              {
+                'OldSize': eventsToBeSent.length,
+                'NewSize': _nextFlushBatchSize,
+              },
+            );
           }
         }
 
