@@ -32,13 +32,12 @@ class SeqEventResult {
     SeqEvent event,
     Object error, {
     bool isPermanent = false,
-  }) =>
-      SeqEventResult._(
-        event: event,
-        isSuccess: false,
-        error: error,
-        isPermanent: isPermanent,
-      );
+  }) => SeqEventResult._(
+    event: event,
+    isSuccess: false,
+    error: error,
+    isPermanent: isPermanent,
+  );
 
   /// The event this result refers to.
   final SeqEvent event;

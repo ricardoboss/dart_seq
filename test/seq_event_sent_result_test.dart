@@ -30,11 +30,7 @@ void main() {
       final event = SeqEvent.info('test');
       final error = Exception('malformed');
 
-      final result = SeqEventResult.failure(
-        event,
-        error,
-        isPermanent: true,
-      );
+      final result = SeqEventResult.failure(event, error, isPermanent: true);
 
       expect(result.isSuccess, isFalse);
       expect(result.isPermanent, isTrue);

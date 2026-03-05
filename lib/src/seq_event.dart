@@ -4,7 +4,22 @@ import 'package:dart_seq/src/seq_context.dart';
 import 'package:dart_seq/src/seq_log_level.dart';
 
 /// Known Seq CLEF keys that should not be double-escaped in context.
-const _knownSeqKeys = {'@t', '@m', '@mt', '@l', '@x', '@i', '@r', '@tr', '@sp', '@ps', '@st', '@sc', '@ra', '@sk'};
+const _knownSeqKeys = {
+  '@t',
+  '@m',
+  '@mt',
+  '@l',
+  '@x',
+  '@i',
+  '@r',
+  '@tr',
+  '@sp',
+  '@ps',
+  '@st',
+  '@sc',
+  '@ra',
+  '@sk',
+};
 
 /// This class represents a single Seq event. It includes metadata like the
 /// timestamp and also the actual message and context.
@@ -141,7 +156,9 @@ class SeqEvent {
     String? spanKind,
   ]) {
     final time = DateTime.now();
-    final renderings = context?.map((key, value) => MapEntry(key, _renderValue(value)));
+    final renderings = context?.map(
+      (key, value) => MapEntry(key, _renderValue(value)),
+    );
     final m = renderings == null ? message : null;
     final mt = renderings == null ? null : message;
 
@@ -166,7 +183,13 @@ class SeqEvent {
 
   /// Creates a [SeqLogLevel.verbose] event.
   factory SeqEvent.verbose(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.verbose.value, null, null, context);
+    return SeqEvent.now(
+      message,
+      SeqLogLevel.verbose.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.debug] event.
@@ -176,12 +199,24 @@ class SeqEvent {
 
   /// Creates a [SeqLogLevel.information] event.
   factory SeqEvent.info(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.information.value, null, null, context);
+    return SeqEvent.now(
+      message,
+      SeqLogLevel.information.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.warning] event.
   factory SeqEvent.warning(String message, [SeqContext? context]) {
-    return SeqEvent.now(message, SeqLogLevel.warning.value, null, null, context);
+    return SeqEvent.now(
+      message,
+      SeqLogLevel.warning.value,
+      null,
+      null,
+      context,
+    );
   }
 
   /// Creates a [SeqLogLevel.error] event.

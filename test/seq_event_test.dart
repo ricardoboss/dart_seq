@@ -96,13 +96,9 @@ void main() {
       });
 
       test('with context sets messageTemplate and renderings', () {
-        final event = SeqEvent.now(
-          'hello {Name}',
-          null,
-          null,
-          null,
-          {'Name': 'World'},
-        );
+        final event = SeqEvent.now('hello {Name}', null, null, null, {
+          'Name': 'World',
+        });
 
         expect(event.message, isNull);
         expect(event.messageTemplate, 'hello {Name}');
@@ -302,10 +298,7 @@ void main() {
       });
 
       test('includes message when set', () {
-        final event = SeqEvent(
-          timestamp: DateTime.utc(2024),
-          message: 'hello',
-        );
+        final event = SeqEvent(timestamp: DateTime.utc(2024), message: 'hello');
 
         expect(event.toMap()['@m'], 'hello');
       });
@@ -452,10 +445,7 @@ void main() {
       });
 
       test('excludes null new CLEF properties', () {
-        final event = SeqEvent(
-          timestamp: DateTime.utc(2024),
-          message: 'msg',
-        );
+        final event = SeqEvent(timestamp: DateTime.utc(2024), message: 'msg');
 
         final map = event.toMap();
 
@@ -572,10 +562,7 @@ void main() {
       });
 
       test('adds context when event has no existing context', () {
-        final event = SeqEvent(
-          timestamp: DateTime.utc(2024),
-          message: 'msg',
-        );
+        final event = SeqEvent(timestamp: DateTime.utc(2024), message: 'msg');
 
         final result = event.withAddedContext({'key': 'value'});
 
@@ -585,13 +572,12 @@ void main() {
 
     group('_renderValue', () {
       test('primitives pass through in renderings', () {
-        final event = SeqEvent.now(
-          'msg {A} {B} {C} {D}',
-          null,
-          null,
-          null,
-          {'A': 42, 'B': true, 'C': 'hello', 'D': null},
-        );
+        final event = SeqEvent.now('msg {A} {B} {C} {D}', null, null, null, {
+          'A': 42,
+          'B': true,
+          'C': 'hello',
+          'D': null,
+        });
 
         expect(event.renderings!['A'], 42);
         expect(event.renderings!['B'], true);
@@ -600,29 +586,17 @@ void main() {
       });
 
       test('complex objects get jsonEncoded in renderings', () {
-        final event = SeqEvent.now(
-          'msg {Data}',
-          null,
-          null,
-          null,
-          {
-            'Data': {'nested': 'value'},
-          },
-        );
+        final event = SeqEvent.now('msg {Data}', null, null, null, {
+          'Data': {'nested': 'value'},
+        });
 
         expect(event.renderings!['Data'], jsonEncode({'nested': 'value'}));
       });
 
       test('list values get jsonEncoded in renderings', () {
-        final event = SeqEvent.now(
-          'msg {Items}',
-          null,
-          null,
-          null,
-          {
-            'Items': [1, 2, 3],
-          },
-        );
+        final event = SeqEvent.now('msg {Items}', null, null, null, {
+          'Items': [1, 2, 3],
+        });
 
         expect(event.renderings!['Items'], jsonEncode([1, 2, 3]));
       });

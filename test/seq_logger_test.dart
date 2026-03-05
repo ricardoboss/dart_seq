@@ -111,65 +111,69 @@ void main() {
         expect(cache.count, 2);
       });
 
-      test('calls onFlushError with synthetic results on total failure',
-          () async {
-        final sendError = Exception('bad request');
-        client.throwOnSend = sendError;
+      test(
+        'calls onFlushError with synthetic results on total failure',
+        () async {
+          final sendError = Exception('bad request');
+          client.throwOnSend = sendError;
 
-        Iterable<SeqEventResult>? capturedResults;
+          Iterable<SeqEventResult>? capturedResults;
 
-        final logger = SeqLogger(
-          client: client,
-          cache: cache,
-          backlogLimit: 10,
-          autoFlush: false,
-          onFlushError: (results, error) async {
-            capturedResults = results;
-            return [];
-          },
-        );
+          final logger = SeqLogger(
+            client: client,
+            cache: cache,
+            backlogLimit: 10,
+            autoFlush: false,
+            onFlushError: (results, error) async {
+              capturedResults = results;
+              return [];
+            },
+          );
 
-        await logger.send(SeqEvent.info('one'));
-        await logger.flush();
+          await logger.send(SeqEvent.info('one'));
+          await logger.flush();
 
-        expect(capturedResults, isNotNull);
-        expect(capturedResults, hasLength(1));
-        expect(capturedResults!.first.isSuccess, isFalse);
-        expect(capturedResults!.first.error, sendError);
-      });
+          expect(capturedResults, isNotNull);
+          expect(capturedResults, hasLength(1));
+          expect(capturedResults!.first.isSuccess, isFalse);
+          expect(capturedResults!.first.error, sendError);
+        },
+      );
 
-      test('calls onFlushError with per-event results on partial failure',
-          () async {
-        final event1 = SeqEvent.info('good');
-        final event2 = SeqEvent.info('bad');
+      test(
+        'calls onFlushError with per-event results on partial failure',
+        () async {
+          final event1 = SeqEvent.info('good');
+          final event2 = SeqEvent.info('bad');
 
-        client.resultsToReturn = [
-          SeqEventResult.success(event1),
-          SeqEventResult.failure(event2, Exception('malformed')),
-        ];
+          client.resultsToReturn = [
+            SeqEventResult.success(event1),
+            SeqEventResult.failure(event2, Exception('malformed')),
+          ];
 
-        Iterable<SeqEventResult>? capturedResults;
+          Iterable<SeqEventResult>? capturedResults;
 
-        final logger = SeqLogger(
-          client: client,
-          cache: cache,
-          backlogLimit: 10,
-          autoFlush: false,
-          onFlushError: (results, error) async {
-            capturedResults = results;
-            return [];
-          },
-        );
+          final logger = SeqLogger(
+            client: client,
+            cache: cache,
+            backlogLimit: 10,
+            autoFlush: false,
+            onFlushError: (results, error) async {
+              capturedResults = results;
+              return [];
+            },
+          );
 
-        await cache.record(event1);
-        await cache.record(event2);
-        await logger.flush();
+          await cache.record(event1);
+          await cache.record(event2);
+          await logger.flush();
 
-        final resultsList = capturedResults!.toList();
-        expect(resultsList, hasLength(2));
-        expect(resultsList[0].isSuccess, isTrue);
-        expect(resultsList[1].isSuccess, isFalse);
-      });
+          final resultsList = capturedResults!.toList();
+          expect(resultsList, hasLength(2));
+          expect(resultsList[0].isSuccess, isTrue);
+          expect(resultsList[1].isSuccess, isFalse);
+        },
+      );
 
       test('partial failure drops permanent, re-queues transient', () async {
         final event1 = SeqEvent.info('good');
@@ -232,39 +236,42 @@ void main() {
         await cache.record(event2);
         await logger.flush();
 
-        final warnings =
-            diagnosticEvents.where((e) => e.level == 'warning').toList();
+        final warnings = diagnosticEvents
+            .where((e) => e.level == 'warning')
+            .toList();
         expect(warnings, hasLength(1));
         expect(warnings.first.context!['Message'], 'bad-trace-id');
       });
 
-      test('non-retryable exception halves batch size across flushes',
-          () async {
-        client.throwOnSend = _NonRetryableException('payload too large');
+      test(
+        'non-retryable exception halves batch size across flushes',
+        () async {
+          client.throwOnSend = _NonRetryableException('payload too large');
 
-        final logger = SeqLogger(
-          client: client,
-          cache: cache,
-          backlogLimit: 10,
-          autoFlush: false,
-        );
+          final logger = SeqLogger(
+            client: client,
+            cache: cache,
+            backlogLimit: 10,
+            autoFlush: false,
+          );
 
-        for (var i = 0; i < 4; i++) {
-          await logger.send(SeqEvent.info('event-$i'));
-        }
+          for (var i = 0; i < 4; i++) {
+            await logger.send(SeqEvent.info('event-$i'));
+          }
 
-        // First flush: tries all 4, fails, halves to 2
-        await logger.flush();
-        expect(cache.count, 4);
+          // First flush: tries all 4, fails, halves to 2
+          await logger.flush();
+          expect(cache.count, 4);
 
-        // Second flush: tries first 2, fails, halves to 1
-        await logger.flush();
-        expect(cache.count, 4);
+          // Second flush: tries first 2, fails, halves to 1
+          await logger.flush();
+          expect(cache.count, 4);
 
-        // Third flush: tries 1 event, fails, drops it
-        await logger.flush();
-        expect(cache.count, 3, reason: 'Single non-retryable event dropped');
-      });
+          // Third flush: tries 1 event, fails, drops it
+          await logger.flush();
+          expect(cache.count, 3, reason: 'Single non-retryable event dropped');
+        },
+      );
 
       test('batch size resets after successful smaller flush', () async {
         client.throwOnSend = _NonRetryableException('payload too large');
@@ -316,11 +323,7 @@ void main() {
       test('swallows flush errors when false', () async {
         client.throwOnSend = Exception('server error');
 
-        final logger = SeqLogger(
-          client: client,
-          cache: cache,
-          backlogLimit: 1,
-        );
+        final logger = SeqLogger(client: client, cache: cache, backlogLimit: 1);
 
         // Should not throw
         await logger.send(SeqEvent.info('test'));
@@ -397,11 +400,7 @@ void main() {
         );
 
         final exception = Exception('fail');
-        await logger.log(
-          SeqLogLevel.error,
-          'oops',
-          exception: exception,
-        );
+        await logger.log(SeqLogLevel.error, 'oops', exception: exception);
 
         final event = await cache.peek(1).first;
         expect(event.exception, exception);

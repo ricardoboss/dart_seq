@@ -25,10 +25,11 @@ import 'package:dart_seq/dart_seq.dart';
 /// - Distinguish between error types beyond permanent/transient
 ///
 /// See [SeqLogger.onFlushError] for a recommended implementation example.
-typedef FlushErrorHandler = Future<List<SeqEvent>> Function(
-  Iterable<SeqEventResult> results,
-  Object error,
-);
+typedef FlushErrorHandler =
+    Future<List<SeqEvent>> Function(
+      Iterable<SeqEventResult> results,
+      Object error,
+    );
 
 /// The base class for logging events to Seq.
 class SeqLogger {
@@ -179,7 +180,8 @@ class SeqLogger {
 
   /// Checks if an event should be logged based on the minimum log level.
   bool shouldLog(SeqEvent event) {
-    return minimumLogLevel == null || compareLevels(minimumLogLevel, event.level) <= 0;
+    return minimumLogLevel == null ||
+        compareLevels(minimumLogLevel, event.level) <= 0;
   }
 
   /// Checks if the cache should be flushed based on the backlog limit.
@@ -258,8 +260,9 @@ class SeqLogger {
         );
 
         if (onFlushError case final handler?) {
-          final syntheticResults =
-              eventsToBeSent.map((event) => SeqEventResult.failure(event, e));
+          final syntheticResults = eventsToBeSent.map(
+            (event) => SeqEventResult.failure(event, e),
+          );
           await cache.remove(eventsToBeSent.length);
           final eventsToKeep = await handler(syntheticResults, e);
           for (final event in eventsToKeep) {
@@ -281,8 +284,10 @@ class SeqLogger {
           } else {
             // Halve the batch size for the next flush attempt. Events stay
             // in cache - only the peek window shrinks.
-            _nextFlushBatchSize =
-                (eventsToBeSent.length ~/ 2).clamp(1, backlogLimit);
+            _nextFlushBatchSize = (eventsToBeSent.length ~/ 2).clamp(
+              1,
+              backlogLimit,
+            );
             diagnosticLog(
               SeqLogLevel.warning,
               'Reducing batch size from {OldSize} to {NewSize} '
@@ -407,20 +412,19 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.verbose,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.verbose,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 
   /// Records a debug event for sending to Seq.
   ///
@@ -436,20 +440,19 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.debug,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.debug,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 
   /// Records an information event for sending to Seq.
   ///
@@ -465,20 +468,19 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.information,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.information,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 
   /// Records a warning event for sending to Seq.
   ///
@@ -494,20 +496,19 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.warning,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.warning,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 
   /// Records an error event for sending to Seq.
   ///
@@ -523,20 +524,19 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.error,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.error,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 
   /// Records a fatal event for sending to Seq.
   ///
@@ -552,18 +552,17 @@ class SeqLogger {
     String? scope,
     Map<String, dynamic>? resourceAttributes,
     String? spanKind,
-  }) =>
-      log(
-        SeqLogLevel.fatal,
-        message,
-        exception: exception,
-        context: context,
-        traceId: traceId,
-        spanId: spanId,
-        parentSpanId: parentSpanId,
-        spanStart: spanStart,
-        scope: scope,
-        resourceAttributes: resourceAttributes,
-        spanKind: spanKind,
-      );
+  }) => log(
+    SeqLogLevel.fatal,
+    message,
+    exception: exception,
+    context: context,
+    traceId: traceId,
+    spanId: spanId,
+    parentSpanId: parentSpanId,
+    spanStart: spanStart,
+    scope: scope,
+    resourceAttributes: resourceAttributes,
+    spanKind: spanKind,
+  );
 }
