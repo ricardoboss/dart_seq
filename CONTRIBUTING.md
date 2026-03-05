@@ -16,7 +16,8 @@ There are several ways you can contribute to `dart_seq`:
   - Create a new branch for your changes: `git checkout -b feature/your-feature-name`.
   - Make your code changes, adhering to the project's coding style and guidelines.
   - Write appropriate tests for your changes, ensuring that they pass successfully.
-  - Commit your changes with a descriptive commit message: `git commit -m "Add new feature: your feature name"`.
+  - Commit your changes (preferably using [conventional commits](https://www.conventionalcommits.org/en/v1.0.0/)): `git commit -m "feat: adds x"`.
+    - Include the _reason_ for making the change, not _what_ you changed
   - Push your branch to your forked repository: `git push origin feature/your-feature-name`.
   - Open a pull request on the [GitHub repository](https://github.com/ricardoboss/dart_seq/pulls?q=is%3Apr+is%3Aopen+sort%3Aupdated-desc), explaining your changes and providing any necessary context.
 
@@ -28,6 +29,7 @@ To maintain a consistent codebase and ensure readability, please adhere to the f
 - Write clear, concise, and self-explanatory code with appropriate comments where necessary.
 - Ensure that your code passes all existing tests, and write additional tests for any new features or changes.
 - Document any public APIs using DartDoc comments to provide clear and comprehensive documentation.
+- AI generated code is generally ok, but refrain from making too many changes at once. Each commit (and each PR) should focus on one change at a time.
 
 ## Communication
 
