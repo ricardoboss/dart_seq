@@ -157,11 +157,18 @@ class SeqLogger {
     Object? exception,
     SeqContext? context,
   ]) async {
+    var actualContext = context;
     if (context != null && context.isEmpty) {
-      context = null;
+      actualContext = null;
     }
 
-    final event = SeqEvent.now(message, level.value, null, exception, context);
+    final event = SeqEvent.now(
+      message,
+      level.value,
+      null,
+      exception,
+      actualContext,
+    );
 
     await send(event);
   }
