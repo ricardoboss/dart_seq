@@ -156,7 +156,8 @@ class SeqEvent {
     String? spanKind,
   ]) {
     final time = DateTime.now();
-    final renderings = context?.map((key, value) => MapEntry(key, _renderValue(value)));
+    final renderings =
+        context?.map((key, value) => MapEntry(key, _renderValue(value)));
     final m = renderings == null ? message : null;
     final mt = renderings == null ? null : message;
 
@@ -351,21 +352,27 @@ class SeqEvent {
     if (traceId != null) {
       data['@tr'] = traceId;
     }
+
     if (spanId != null) {
       data['@sp'] = spanId;
     }
+
     if (parentSpanId != null) {
       data['@ps'] = parentSpanId;
     }
-    if (spanStart != null) {
-      data['@st'] = spanStart!.toUtc().toIso8601String();
+
+    if (spanStart case final st?) {
+      data['@st'] = st.toUtc().toIso8601String();
     }
+
     if (scope != null) {
       data['@sc'] = scope;
     }
+
     if (resourceAttributes?.isNotEmpty ?? false) {
       data['@ra'] = resourceAttributes;
     }
+
     if (spanKind != null) {
       data['@sk'] = spanKind;
     }

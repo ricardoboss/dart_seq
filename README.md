@@ -70,44 +70,44 @@ which then can be viewed in your Seq instance:
 
 ### Successful / partial send (results returned)
 
-When `sendEvents` returns a list of `SeqEventSentResult`:
+When `sendEvents` returns a list of `SeqEventResult`:
 
 1. All events are removed from cache (they were all attempted).
-2. If all succeeded — minimum log level is updated, done.
-3. If some failed, the default behavior uses `SeqEventSentResult.isPermanent`:
+2. If all succeeded - minimum log level is updated, done.
+3. If some failed, the default behavior uses `SeqEventResult.isPermanent`:
 
-| `isPermanent` | Default (no `onFlushError`) | With `onFlushError` |
-|---|---|---|
-| `true` | **Dropped** — event is malformed, retry would fail again | Callback decides |
-| `false` | **Re-queued** to cache for retry | Callback decides |
+| `isPermanent` | Default (no `onFlushError`)                              | With `onFlushError` |
+| ------------- | -------------------------------------------------------- | ------------------- |
+| `true`        | **Dropped** - event is malformed, retry would fail again | Callback decides    |
+| `false`       | **Re-queued** to cache for retry                         | Callback decides    |
 
 ### Total failure (exception thrown)
 
 When `sendEvents` throws (network error, auth failure, etc.):
 
-| | No `onFlushError` | With `onFlushError` |
-|---|---|---|
-| Cache | **Untouched** — events were never sent | Removed, then callback returns which to re-queue |
+|       | No `onFlushError`                      | With `onFlushError`                              |
+| ----- | -------------------------------------- | ------------------------------------------------ |
+| Cache | **Untouched** - events were never sent | Removed, then callback returns which to re-queue |
 
 ### Flush triggers
 
-| Trigger | Condition | Awaited? |
-|---|---|---|
-| Auto-flush | `autoFlush == true && cache.count >= backlogLimit` | Yes (in `send()`) |
-| Timer flush | `flushInterval != null && cache.count > 0` | No (`unawaited`) |
-| Manual | Caller calls `flush()` | Up to caller |
+| Trigger     | Condition                                          | Awaited?          |
+| ----------- | -------------------------------------------------- | ----------------- |
+| Auto-flush  | `autoFlush == true && cache.count >= backlogLimit` | Yes (in `send()`) |
+| Timer flush | `flushInterval != null && cache.count > 0`         | No (`unawaited`)  |
+| Manual      | Caller calls `flush()`                             | Up to caller      |
 
 If `flush()` is already running, subsequent calls return immediately (concurrent guard).
 
 ### Configuration flags
 
-| Flag | Default | Effect |
-|---|---|---|
-| `autoFlush` | `true` | Auto-flush when cache reaches `backlogLimit` |
-| `backlogLimit` | `50` | Max events per flush; auto-flush threshold |
-| `throwOnError` | `false` | `false`: errors swallowed, logged via `onDiagnosticLog`. `true`: propagated |
-| `flushInterval` | `null` | Timer-based flush after period of inactivity (reset on each `send()`) |
-| `onFlushError` | `null` | Custom error handler. When `null`, built-in defaults apply (see above) |
+| Flag            | Default | Effect                                                                      |
+| --------------- | ------- | --------------------------------------------------------------------------- |
+| `autoFlush`     | `true`  | Auto-flush when cache reaches `backlogLimit`                                |
+| `backlogLimit`  | `50`    | Max events per flush; auto-flush threshold                                  |
+| `throwOnError`  | `false` | `false`: errors swallowed, logged via `onDiagnosticLog`. `true`: propagated |
+| `flushInterval` | `null`  | Timer-based flush after period of inactivity (reset on each `send()`)       |
+| `onFlushError`  | `null`  | Custom error handler. When `null`, built-in defaults apply (see above)      |
 
 ### Custom `onFlushError`
 
@@ -119,11 +119,11 @@ onFlushError: (results, error) async {
 
   for (final r in results.where((r) => !r.isSuccess)) {
     if (r.isPermanent) {
-      // Malformed event — retrying would fail again
+      // Malformed event - retrying would fail again
       log('Dropping permanently rejected event: ${r.error}');
       continue;
     }
-    // Transient failure — retry
+    // Transient failure - retry
     toRetry.add(r.event);
   }
 

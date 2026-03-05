@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:dart_seq/dart_seq.dart';
 
 /// Callback invoked when [SeqLogger.flush] encounters send failures.
@@ -14,7 +12,7 @@ import 'package:dart_seq/dart_seq.dart';
 /// ## Default behavior (when not set)
 ///
 /// - **Partial failure** (results returned): events with
-///   [SeqEventSentResult.isPermanent] `true` are dropped (e.g. HTTP 400 —
+///   [SeqEventResult.isPermanent] `true` are dropped (e.g. HTTP 400 -
 ///   the event is malformed and retrying would produce the same rejection).
 ///   Transient failures (`isPermanent: false`) are re-queued automatically.
 /// - **Total failure** (exception thrown): all events stay in cache (they
@@ -24,12 +22,11 @@ import 'package:dart_seq/dart_seq.dart';
 ///
 /// Provide a custom handler when you need to:
 /// - Log or report individual event failures
-/// - Apply a retry limit (e.g. drop events that have failed N times)
 /// - Distinguish between error types beyond permanent/transient
 ///
 /// See [SeqLogger.onFlushError] for a recommended implementation example.
 typedef FlushErrorHandler = Future<List<SeqEvent>> Function(
-  List<SeqEventSentResult> results,
+  Iterable<SeqEventResult> results,
   Object error,
 );
 
@@ -45,7 +42,6 @@ class SeqLogger {
     this.autoFlush = true,
     this.onFlushError,
     this.throwOnError = false,
-    this.flushInterval,
   }) : assert(backlogLimit >= 0, 'backlogLimit must be >= 0');
 
   /// Compares two log levels.
@@ -121,26 +117,9 @@ class SeqLogger {
 
   /// Optional callback invoked when [flush] encounters send failures.
   ///
-  /// Called with per-event [SeqEventSentResult]s and the [error]. Each result
-  /// carries [SeqEventSentResult.isSuccess], [SeqEventSentResult.error], and
-  /// [SeqEventSentResult.isPermanent] so you can make fine-grained decisions.
-  ///
-  /// Return the events that should be re-queued in cache for a future flush
-  /// attempt. Return an empty list to drop all.
-  ///
-  /// ## Default behavior (when not set)
-  ///
-  /// The built-in logic already handles the common cases correctly:
-  ///
-  /// - **Partial failure** (per-event results): permanent failures
-  ///   (`isPermanent: true`, e.g. HTTP 400) are dropped. Transient failures
-  ///   are re-queued for retry.
-  /// - **Total failure** (exception): all events stay in cache.
+  /// See [FlushErrorHandler] for full documentation and default behavior.
   ///
   /// ## Recommended implementation
-  ///
-  /// Only provide this callback if you need custom behavior beyond the
-  /// defaults — for example, logging failures or applying a retry limit.
   ///
   /// ```dart
   /// onFlushError: (results, error) async {
@@ -148,11 +127,11 @@ class SeqLogger {
   ///
   ///   for (final r in results.where((r) => !r.isSuccess)) {
   ///     if (r.isPermanent) {
-  ///       // Event is malformed — retrying would fail again.
+  ///       // Event is malformed - retrying would fail again.
   ///       log('Dropping permanently rejected event: ${r.error}');
   ///       continue;
   ///     }
-  ///     // Transient failure (network, server overload) — retry.
+  ///     // Transient failure (network, server overload) - retry.
   ///     toRetry.add(r.event);
   ///   }
   ///
@@ -164,12 +143,6 @@ class SeqLogger {
   /// When `false` (default), exceptions during [flush] are caught and
   /// reported via [onDiagnosticLog]. When `true`, they propagate to caller.
   final bool throwOnError;
-
-  /// Optional duration for periodic auto-flushing.
-  ///
-  /// When set, a timer is started (or reset) after each [send] call.
-  /// When the timer fires, [flush] is called if there are cached events.
-  final Duration? flushInterval;
 
   /// The minimum log level that should be logged.
   String? minimumLogLevel;
@@ -197,8 +170,6 @@ class SeqLogger {
         }
       }
     }
-
-    _resetFlushTimer();
   }
 
   /// Adds the global context to an event.
@@ -222,27 +193,6 @@ class SeqLogger {
   /// [backlogLimit] after a successful send.
   late int _nextFlushBatchSize = backlogLimit;
 
-  Timer? _flushTimer;
-
-  void _resetFlushTimer() {
-    _flushTimer?.cancel();
-    if (flushInterval != null) {
-      _flushTimer = Timer(flushInterval!, _onFlushTimer);
-    }
-  }
-
-  void _onFlushTimer() {
-    if (cache.count > 0) {
-      unawaited(flush());
-    }
-  }
-
-  /// Cancels the flush timer. Call when the logger is no longer needed.
-  void dispose() {
-    _flushTimer?.cancel();
-    _flushTimer = null;
-  }
-
   /// Flushes at most [backlogLimit] events in the cache to Seq and updates the
   /// minimum log level based on the response from Seq.
   Future<void> flush() async {
@@ -264,42 +214,41 @@ class SeqLogger {
         await cache.remove(eventsToBeSent.length);
         _nextFlushBatchSize = backlogLimit;
 
-        final failed = results.where((r) => !r.isSuccess).toList();
-        final allSucceeded = failed.isEmpty;
+        final failed = results.where((r) => !r.isSuccess);
 
-        if (!allSucceeded) {
-          final error = SeqClientException(
-            '${failed.length} of ${results.length} events failed',
-          );
-
-          if (onFlushError != null) {
-            final eventsToKeep = await onFlushError!(results, error);
+        if (failed.isNotEmpty) {
+          if (onFlushError case final handler?) {
+            final error = SeqClientException(
+              '${failed.length} of ${results.length} events failed',
+            );
+            final eventsToKeep = await handler(results, error);
             for (final event in eventsToKeep) {
               await cache.record(event);
             }
           } else {
             // Default: re-queue transient failures, drop permanent ones.
-            final permanent = failed.where((r) => r.isPermanent).toList();
-            final transient = failed.where((r) => !r.isPermanent).toList();
-
-            for (final r in permanent) {
-              diagnosticLog(
-                SeqLogLevel.warning,
-                'Dropping permanently rejected event: {Message}',
-                r.error is Exception ? r.error! as Exception : null,
-                {'Message': r.event.message},
-              );
-            }
-
-            for (final r in transient) {
-              await cache.record(r.event);
+            // Re-queued events are appended to the end of the cache (not
+            // inserted at their original position). This is fine because
+            // each event carries its own @t timestamp and Seq handles
+            // out-of-order events correctly.
+            for (final r in failed) {
+              if (r.isPermanent) {
+                diagnosticLog(
+                  SeqLogLevel.warning,
+                  'Dropping permanently rejected event: {Message}',
+                  r.error is Exception ? r.error! as Exception : null,
+                  {'Message': r.event.message},
+                );
+              } else {
+                await cache.record(r.event);
+              }
             }
           }
         }
 
         _updateMinimumLogLevel();
       } on Exception catch (e) {
-        // Path B: sendEvents threw (total failure — network/auth/413)
+        // Path B: sendEvents threw (total failure - network/auth/413)
         // Events stay in cache by default (they were never sent).
         diagnosticLog(
           SeqLogLevel.error,
@@ -308,10 +257,11 @@ class SeqLogger {
           {'EventCount': eventsToBeSent.length},
         );
 
-        if (onFlushError != null) {
-          final syntheticResults = eventsToBeSent.map((event) => SeqEventSentResult.failure(event, e)).toList();
+        if (onFlushError case final handler?) {
+          final syntheticResults =
+              eventsToBeSent.map((event) => SeqEventResult.failure(event, e));
           await cache.remove(eventsToBeSent.length);
-          final eventsToKeep = await onFlushError!(syntheticResults, e);
+          final eventsToKeep = await handler(syntheticResults, e);
           for (final event in eventsToKeep) {
             await cache.record(event);
           }
@@ -319,7 +269,7 @@ class SeqLogger {
           // Non-retryable error (e.g. 413 Payload Too Large, 400 Bad
           // Request). Retrying the same batch will produce the same error.
           if (eventsToBeSent.length == 1) {
-            // Single event is too large — drop it.
+            // Single event is too large - drop it.
             await cache.remove(1);
             diagnosticLog(
               SeqLogLevel.warning,
@@ -330,8 +280,9 @@ class SeqLogger {
             _nextFlushBatchSize = backlogLimit;
           } else {
             // Halve the batch size for the next flush attempt. Events stay
-            // in cache — only the peek window shrinks.
-            _nextFlushBatchSize = eventsToBeSent.length ~/ 2;
+            // in cache - only the peek window shrinks.
+            _nextFlushBatchSize =
+                (eventsToBeSent.length ~/ 2).clamp(1, backlogLimit);
             diagnosticLog(
               SeqLogLevel.warning,
               'Reducing batch size from {OldSize} to {NewSize} '
@@ -345,7 +296,7 @@ class SeqLogger {
           }
         }
 
-        if (throwOnError) {
+        if (throwOnError && onFlushError == null) {
           rethrow;
         }
       }
@@ -361,16 +312,18 @@ class SeqLogger {
 
   void _updateMinimumLogLevel() {
     final newLogLevel = client.minimumLevelAccepted;
-    if (minimumLogLevel != newLogLevel) {
-      diagnosticLog(
-        SeqLogLevel.verbose,
-        'Accepted new log level {MinimumLogLevel}',
-        null,
-        {'MinimumLogLevel': newLogLevel},
-      );
-
-      minimumLogLevel = newLogLevel;
+    if (minimumLogLevel == newLogLevel) {
+      return;
     }
+
+    diagnosticLog(
+      SeqLogLevel.verbose,
+      'Accepted new log level {MinimumLogLevel}',
+      null,
+      {'MinimumLogLevel': newLogLevel},
+    );
+
+    minimumLogLevel = newLogLevel;
   }
 
   /// Records an event for sending to Seq.
@@ -384,20 +337,20 @@ class SeqLogger {
   /// The distributed tracing parameters follow the OpenTelemetry specification
   /// and are mapped to Seq's CLEF extensions:
   ///
-  /// - [traceId] (`@tr`) — the distributed trace identifier, a 32-character
+  /// - [traceId] (`@tr`) - the distributed trace identifier, a 32-character
   ///   lowercase hex string. See [W3C Trace Context](https://www.w3.org/TR/trace-context/#trace-id).
-  /// - [spanId] (`@sp`) — the span identifier, a 16-character lowercase hex
+  /// - [spanId] (`@sp`) - the span identifier, a 16-character lowercase hex
   ///   string uniquely identifying this unit of work within a trace.
   ///   See [W3C Trace Context](https://www.w3.org/TR/trace-context/#parent-id).
-  /// - [parentSpanId] (`@ps`) — the span ID of the caller/parent span.
-  /// - [spanStart] (`@st`) — the timestamp when the span started. Used with
+  /// - [parentSpanId] (`@ps`) - the span ID of the caller/parent span.
+  /// - [spanStart] (`@st`) - the timestamp when the span started. Used with
   ///   the event timestamp to compute span duration.
-  /// - [scope] (`@sc`) — the instrumentation scope (e.g. library or module
+  /// - [scope] (`@sc`) - the instrumentation scope (e.g. library or module
   ///   name) that produced the event.
-  /// - [resourceAttributes] (`@ra`) — a map of resource attributes describing
+  /// - [resourceAttributes] (`@ra`) - a map of resource attributes describing
   ///   the entity producing telemetry (e.g. service name, version, host).
   ///   See [OpenTelemetry Resource SDK](https://opentelemetry.io/docs/specs/otel/resource/sdk/).
-  /// - [spanKind] (`@sk`) — the kind of span: `client`, `server`, `producer`,
+  /// - [spanKind] (`@sk`) - the kind of span: `client`, `server`, `producer`,
   ///   `consumer`, or `internal`.
   ///   See [OpenTelemetry SpanKind](https://opentelemetry.io/docs/specs/otel/trace/api/#spankind).
   ///

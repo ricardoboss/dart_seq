@@ -1,20 +1,16 @@
-## 3.0.0
+## 3.0.0 ([#16](https://github.com/ricardoboss/dart_seq/pull/16))
 
-### Breaking Changes
-
-* `SeqLogger.log()` — `exception` and `context` changed from positional to **named** parameters
-* `SeqLogger` convenience methods (`verbose`, `debug`, `info`, `warning`, `error`, `fatal`) — `exception` and `context` changed from positional to **named** parameters
-* `SeqEvent` constructor — all parameters except `timestamp` are now **named**
-* `SeqEventSentResult` constructor — all parameters are now **named**
-
-### New Features
-
-* **`throwOnError` flag** (#14) — when `false` (default), flush errors are caught and reported via `onDiagnosticLog`; when `true`, they propagate to caller
-* **`flushInterval` timer** (#15) — optional `Duration` that triggers automatic flush after inactivity
-* **`dispose()` method** — cancels the flush timer; call when the logger is no longer needed
-* **`onFlushError` callback** — handler invoked when flush fails; receives failed events and error, returns events to re-queue
-* **OpenTelemetry / distributed tracing fields** (#10) — 7 new CLEF fields on `SeqEvent`: `traceId` (`@tr`), `spanId` (`@sp`), `parentSpanId` (`@ps`), `spanStart` (`@st`), `scope` (`@sc`), `resourceAttributes` (`@ra`), `spanKind` (`@sk`)
+* **Breaking:** `SeqLogger.log()` - `exception` and `context` changed from positional to named parameters
+* **Breaking:** `SeqLogger` convenience methods (`verbose`, `debug`, `info`, `warning`, `error`, `fatal`) - same positional-to-named migration
+* **Breaking:** `SeqEvent` constructor - all parameters except `timestamp` are now named
+* **Breaking:** `SeqClient.sendEvents()` - return type changed from `Future<void>` to `Future<List<SeqEventResult>>`
+* `SeqEventResult` class - per-event success/failure result with `isPermanent` flag
+* `throwOnError` flag ([#14](https://github.com/ricardoboss/dart_seq/issues/14)) - when `false` (default), flush errors are caught and reported via `onDiagnosticLog`; when `true`, they propagate to caller
+* `onFlushError` callback - handler invoked when flush fails; receives failed events and error, returns events to re-queue
+* `SeqClientException.isRetryable` - allows implementations to signal non-retryable errors (e.g. 413 Payload Too Large)
+* OpenTelemetry / distributed tracing fields ([#10](https://github.com/ricardoboss/dart_seq/issues/10)) - 7 new CLEF fields on `SeqEvent`: `traceId` (`@tr`), `spanId` (`@sp`), `parentSpanId` (`@ps`), `spanStart` (`@st`), `scope` (`@sc`), `resourceAttributes` (`@ra`), `spanKind` (`@sk`)
 * Known Seq CLEF keys (`@tr`, `@sp`, etc.) are no longer double-escaped in context
+* Exception formatting ([#11](https://github.com/ricardoboss/dart_seq/issues/11)) - `@x` field now uses `toString()` with safe fallback instead of `Error.safeToString()`
 
 ## 2.0.1
 
