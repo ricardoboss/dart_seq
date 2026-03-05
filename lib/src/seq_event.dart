@@ -4,22 +4,7 @@ import 'package:dart_seq/src/seq_context.dart';
 import 'package:dart_seq/src/seq_log_level.dart';
 
 /// Known Seq CLEF keys that should not be double-escaped in context.
-const _knownSeqKeys = {
-  '@t',
-  '@m',
-  '@mt',
-  '@l',
-  '@x',
-  '@i',
-  '@r',
-  '@tr',
-  '@sp',
-  '@ps',
-  '@st',
-  '@sc',
-  '@ra',
-  '@sk',
-};
+const _knownSeqKeys = {'@t', '@m', '@mt', '@l', '@x', '@i', '@r', '@tr', '@sp', '@ps', '@st', '@sc', '@ra', '@sk'};
 
 /// This class represents a single Seq event. It includes metadata like the
 /// timestamp and also the actual message and context.
@@ -156,8 +141,7 @@ class SeqEvent {
     String? spanKind,
   ]) {
     final time = DateTime.now();
-    final renderings =
-        context?.map((key, value) => MapEntry(key, _renderValue(value)));
+    final renderings = context?.map((key, value) => MapEntry(key, _renderValue(value)));
     final m = renderings == null ? message : null;
     final mt = renderings == null ? null : message;
 
@@ -182,13 +166,7 @@ class SeqEvent {
 
   /// Creates a [SeqLogLevel.verbose] event.
   factory SeqEvent.verbose(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-      message,
-      SeqLogLevel.verbose.value,
-      null,
-      null,
-      context,
-    );
+    return SeqEvent.now(message, SeqLogLevel.verbose.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.debug] event.
@@ -198,24 +176,12 @@ class SeqEvent {
 
   /// Creates a [SeqLogLevel.information] event.
   factory SeqEvent.info(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-      message,
-      SeqLogLevel.information.value,
-      null,
-      null,
-      context,
-    );
+    return SeqEvent.now(message, SeqLogLevel.information.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.warning] event.
   factory SeqEvent.warning(String message, [SeqContext? context]) {
-    return SeqEvent.now(
-      message,
-      SeqLogLevel.warning.value,
-      null,
-      null,
-      context,
-    );
+    return SeqEvent.now(message, SeqLogLevel.warning.value, null, null, context);
   }
 
   /// Creates a [SeqLogLevel.error] event.
@@ -292,10 +258,7 @@ class SeqEvent {
       return this;
     }
 
-    final newContext = {
-      ...?this.context,
-      ...context,
-    };
+    final newContext = {...?this.context, ...context};
 
     return SeqEvent(
       timestamp: timestamp,
@@ -323,59 +286,20 @@ class SeqEvent {
   Map<String, dynamic> toMap() {
     final data = <String, dynamic>{
       '@t': timestamp.toUtc().toIso8601String(),
+      '@m': ?message,
+      '@mt': ?messageTemplate,
+      '@l': ?level,
+      if (exception case final ex?) '@x': _safeToString(ex),
+      '@i': ?id,
+      if (renderings?.isNotEmpty ?? false) '@r': renderings,
+      '@tr': ?traceId,
+      '@sp': ?spanId,
+      '@ps': ?parentSpanId,
+      if (spanStart case final st?) '@st': st.toUtc().toIso8601String(),
+      '@sc': ?scope,
+      if (resourceAttributes?.isNotEmpty ?? false) '@ra': resourceAttributes,
+      '@sk': ?spanKind,
     };
-
-    if (message != null) {
-      data['@m'] = message;
-    }
-
-    if (messageTemplate != null) {
-      data['@mt'] = messageTemplate;
-    }
-
-    if (level != null) {
-      data['@l'] = level;
-    }
-
-    if (exception case final ex?) {
-      data['@x'] = _safeToString(ex);
-    }
-
-    if (id != null) {
-      data['@i'] = id;
-    }
-
-    if (renderings?.isNotEmpty ?? false) {
-      data['@r'] = renderings;
-    }
-
-    if (traceId != null) {
-      data['@tr'] = traceId;
-    }
-
-    if (spanId != null) {
-      data['@sp'] = spanId;
-    }
-
-    if (parentSpanId != null) {
-      data['@ps'] = parentSpanId;
-    }
-
-    if (spanStart case final st?) {
-      data['@st'] = st.toUtc().toIso8601String();
-    }
-
-    if (scope != null) {
-      data['@sc'] = scope;
-    }
-
-    if (resourceAttributes?.isNotEmpty ?? false) {
-      data['@ra'] = resourceAttributes;
-    }
-
-    if (spanKind != null) {
-      data['@sk'] = spanKind;
-    }
 
     if (context != null) {
       for (final e in context!.entries) {
