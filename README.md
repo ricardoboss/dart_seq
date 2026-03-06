@@ -49,8 +49,7 @@ Future<void> main() async {
   await logger.log(
     SeqLogLevel.information,
     'test, logged at: {Timestamp}',
-    null,
-    {
+    context: {
       'Timestamp': DateTime.now().toUtc().toIso8601String(),
     },
   );
@@ -63,6 +62,80 @@ Future<void> main() async {
 which then can be viewed in your Seq instance:
 
 ![Seq Screenshot showing the logged message with metadata](https://raw.githubusercontent.com/ricardoboss/dart_seq/be3db3b777db9cf8791cf4d36f61d2b317122fef/doc/example_output.png)
+
+## Flush Behavior
+
+`SeqLogger.flush()` sends at most `backlogLimit` events from the cache to the server via
+`SeqClient.sendEvents()`. The method handles two outcomes:
+
+### Successful / partial send (results returned)
+
+When `sendEvents` returns a list of `SeqEventResult`:
+
+1. All events are removed from cache (they were all attempted).
+2. If all succeeded - minimum log level is updated, done.
+3. If some failed, the default behavior uses `SeqEventResult.isPermanent`:
+
+| `isPermanent` | Default (no `onFlushError`)                              | With `onFlushError` |
+| ------------- | -------------------------------------------------------- | ------------------- |
+| `true`        | **Dropped** - event is malformed, retry would fail again | Callback decides    |
+| `false`       | **Re-queued** to cache for retry                         | Callback decides    |
+
+### Total failure (exception thrown)
+
+When `sendEvents` throws (network error, auth failure, etc.):
+
+|       | No `onFlushError`                      | With `onFlushError`                              |
+| ----- | -------------------------------------- | ------------------------------------------------ |
+| Cache | **Untouched** - events were never sent | Removed, then callback returns which to re-queue |
+
+### Flush triggers
+
+| Trigger     | Condition                                          | Awaited?          |
+| ----------- | -------------------------------------------------- | ----------------- |
+| Auto-flush  | `autoFlush == true && cache.count >= backlogLimit` | Yes (in `send()`) |
+| Timer flush | `flushInterval != null && cache.count > 0`         | No (`unawaited`)  |
+| Manual      | Caller calls `flush()`                             | Up to caller      |
+
+If `flush()` is already running, subsequent calls return immediately (concurrent guard).
+
+### Configuration flags
+
+| Flag            | Default | Effect                                                                      |
+| --------------- | ------- | --------------------------------------------------------------------------- |
+| `autoFlush`     | `true`  | Auto-flush when cache reaches `backlogLimit`                                |
+| `backlogLimit`  | `50`    | Max events per flush; auto-flush threshold                                  |
+| `throwOnError`  | `false` | `false`: errors swallowed, logged via `onDiagnosticLog`. `true`: propagated |
+| `flushInterval` | `null`  | Timer-based flush after period of inactivity (reset on each `send()`)       |
+| `onFlushError`  | `null`  | Custom error handler. When `null`, built-in defaults apply (see above)      |
+
+### Custom `onFlushError`
+
+Only needed if you want behavior beyond the defaults (e.g. logging, retry limits):
+
+```dart
+onFlushError: (results, error) async {
+  final toRetry = <SeqEvent>[];
+
+  for (final r in results.where((r) => !r.isSuccess)) {
+    if (r.isPermanent) {
+      // Malformed event - retrying would fail again
+      log('Dropping permanently rejected event: ${r.error}');
+      continue;
+    }
+    // Transient failure - retry
+    toRetry.add(r.event);
+  }
+
+  return toRetry;
+}
+```
+
+## Error Handling
+
+See the [`dart_seq_http_client` README](https://pub.dev/packages/dart_seq_http_client) for
+documentation on HTTP-specific error handling, per-event retry on batch failures, and the
+`SeqClientException` hierarchy.
 
 ## Additional information
 
