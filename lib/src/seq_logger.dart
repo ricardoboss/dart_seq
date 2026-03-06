@@ -26,7 +26,7 @@ import 'package:dart_seq/dart_seq.dart';
 ///
 /// See [SeqLogger.onFlushError] for a recommended implementation example.
 typedef FlushErrorHandler =
-    Future<List<SeqEvent>> Function(
+    Future<Iterable<SeqEvent>> Function(
       Iterable<SeqEventResult> results,
       Object error,
     );
