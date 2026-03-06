@@ -1,4 +1,4 @@
-## Unreleased
+## 3.0.0
 
 * BREAKING: `SeqLogger.log()` - `exception` and `context` changed from positional to named parameters
 * BREAKING: `SeqLogger` convenience methods (`verbose`, `debug`, `info`, `warning`, `error`, `fatal`) - same positional-to-named migration
