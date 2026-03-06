@@ -11,9 +11,9 @@ abstract class SeqClient {
   ///
   /// ### Return value
   ///
-  /// Returns a [SeqEventResult] for each event in the batch. Each result is
-  /// either successful ([SeqEventResult.isSuccess]) or failed, with failed
-  /// results carrying an [SeqEventResult.error] and an
+  /// Returns a [SeqEventResult] for each event. Each result is either
+  /// successful ([SeqEventResult.isSuccess]) or failed, with failed results
+  /// carrying an [SeqEventResult.error] and an
   /// [SeqEventResult.isPermanent] flag.
   ///
   /// ### Throwing
@@ -28,7 +28,7 @@ abstract class SeqClient {
   ///   total failure so that callers can reliably match on the exception type.
   /// - The returned future is not guaranteed to be awaited by all callers,
   ///   so implementers should not rely on the caller observing the result.
-  Future<List<SeqEventResult>> sendEvents(List<SeqEvent> events);
+  Future<Iterable<SeqEventResult>> sendEvents(Iterable<SeqEvent> events);
 
   /// Returns the minimum level accepted by the Seq server.
   ///

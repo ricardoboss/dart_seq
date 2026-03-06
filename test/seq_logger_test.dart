@@ -2,12 +2,12 @@ import 'package:dart_seq/dart_seq.dart';
 import 'package:test/test.dart';
 
 class _MockSeqClient implements SeqClient {
-  List<List<SeqEvent>> sentBatches = [];
+  List<Iterable<SeqEvent>> sentBatches = [];
   String? _minimumLevelAccepted;
   Exception? throwOnSend;
 
   /// When set, sendEvents returns these results instead of all-success.
-  List<SeqEventResult>? resultsToReturn;
+  Iterable<SeqEventResult>? resultsToReturn;
 
   @override
   String? get minimumLevelAccepted => _minimumLevelAccepted;
@@ -15,17 +15,18 @@ class _MockSeqClient implements SeqClient {
   set minimumLevelAccepted(String? value) => _minimumLevelAccepted = value;
 
   @override
-  Future<List<SeqEventResult>> sendEvents(List<SeqEvent> events) async {
+  Future<Iterable<SeqEventResult>> sendEvents(Iterable<SeqEvent> events) async {
     if (throwOnSend != null) {
       throw throwOnSend!;
     }
+
     sentBatches.add(events);
 
     if (resultsToReturn != null) {
       return resultsToReturn!;
     }
 
-    return events.map(SeqEventResult.success).toList();
+    return events.map(SeqEventResult.success);
   }
 }
 
